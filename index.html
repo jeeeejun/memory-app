@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="암기장">
+<meta name="theme-color" content="#0f172a">
+<title>암기장</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top no-print">
+  <h1>암기장</h1>
+  <span id="countInfo" class="muted"></span>
+</header>
+
+<main class="no-print">
+  <!-- 카드 -->
+  <section id="tab-cards" class="tab active">
+    <div class="filters">
+      <select id="fSubject"></select>
+      <select id="fScope">
+        <option value="due">오늘 복습할 카드</option>
+        <option value="all">전체 (확정)</option>
+        <option value="wrong">몰랐던 카드</option>
+        <option value="today">오늘 수업</option>
+      </select>
+      <label class="chk"><input type="checkbox" id="fShuffle" checked> 섞기</label>
+    </div>
+    <div id="cardBox" class="card">
+      <div class="meta" id="cMeta"></div>
+      <div class="q" id="cQ"></div>
+      <div class="a hidden" id="cA"></div>
+      <div class="hint" id="cHint">탭해서 답 보기</div>
+    </div>
+    <div class="row">
+      <button class="btn bad" id="bWrong">몰랐다</button>
+      <button class="btn good" id="bRight">알았다</button>
+    </div>
+    <p class="muted center" id="cProgress"></p>
+  </section>
+
+  <!-- 걷기 -->
+  <section id="tab-walk" class="tab">
+    <div class="filters">
+      <select id="wSubject"></select>
+      <select id="wScope">
+        <option value="due">오늘 복습할 카드</option>
+        <option value="all">전체 (확정)</option>
+        <option value="wrong">몰랐던 카드</option>
+        <option value="today">오늘 수업</option>
+      </select>
+      <select id="wPause">
+        <option value="3">쉬기 3초</option>
+        <option value="4" selected>쉬기 4초</option>
+        <option value="6">쉬기 6초</option>
+      </select>
+      <select id="wRate">
+        <option value="0.9">느리게</option>
+        <option value="1" selected>보통</option>
+        <option value="1.15">빠르게</option>
+      </select>
+    </div>
+    <button class="btn big" id="wStart">▶ 걷기 모드 시작</button>
+    <p class="muted">화면 탭 = 알았다 · 왼쪽으로 밀기 = 몰랐다 · 아무것도 안 하면 다음 카드로 넘어가요. 화면이 꺼지면 음성이 멈추니 켜둔 채로 쓰세요.</p>
+  </section>
+
+  <!-- 검수 -->
+  <section id="tab-review" class="tab">
+    <p class="muted">AI가 만든 카드는 '검수대기'로 들어와요. 원본 사진과 비교한 뒤 확정하세요. 확정된 카드만 복습·학습지에 나와요.</p>
+    <div class="row">
+      <select id="rFilter">
+        <option value="검수대기">검수대기만</option>
+        <option value="all">전체 카드</option>
+      </select>
+      <button class="btn small" id="rConfirmAll">보이는 카드 모두 확정</button>
+    </div>
+    <div id="reviewList"></div>
+  </section>
+
+  <!-- 학습지 -->
+  <section id="tab-sheet" class="tab">
+    <div class="filters">
+      <select id="sSubject"></select>
+      <select id="sUnit"></select>
+      <select id="sRange">
+        <option value="today">오늘 수업</option>
+        <option value="week">최근 7일 수업</option>
+        <option value="all" selected>전체</option>
+        <option value="wrong">몰랐던 카드만</option>
+      </select>
+      <select id="sType">
+        <option value="blank">빈칸 채우기</option>
+        <option value="bbak">빡지 (반복 쓰기)</option>
+        <option value="qa">문답형</option>
+      </select>
+      <select id="sLines">
+        <option value="2">쓰기 줄 2</option>
+        <option value="3" selected>쓰기 줄 3</option>
+        <option value="5">쓰기 줄 5</option>
+      </select>
+      <label class="chk"><input type="checkbox" id="sAnswer" checked> 답지 포함</label>
+    </div>
+    <div class="row">
+      <button class="btn" id="sMake">학습지 만들기</button>
+      <button class="btn good" id="sPrint">PDF 저장 / 인쇄</button>
+    </div>
+    <p class="muted">iPhone·iPad: 'PDF 저장' → 공유 버튼 → '파일에 저장' 또는 GoodNotes로 보내기.</p>
+  </section>
+
+  <!-- 추가·백업 -->
+  <section id="tab-data" class="tab">
+    <h2>카드 추가 (JSON 붙여넣기)</h2>
+    <textarea id="pasteBox" rows="8" placeholder='[{"subject":"한국사","unit":"...","lessonDate":"2026-10-31","q":"...","a":"...","sentence":"...","blanks":["..."]}]'></textarea>
+    <div class="row"><button class="btn" id="pasteAdd">추가하기</button></div>
+    <p id="pasteMsg" class="muted"></p>
+
+    <h2>사진 → 카드 요청문</h2>
+    <p class="muted">필기 사진과 함께 AI에게 보내세요. 과목·단원·수업일만 바꾸면 돼요.</p>
+    <textarea id="promptBox" rows="10" readonly></textarea>
+    <div class="row"><button class="btn small" id="copyPrompt">요청문 복사</button></div>
+
+    <h2>백업 · 기기 간 옮기기</h2>
+    <p class="muted">기록은 기기마다 따로 저장돼요. 아이폰에서 내보낸 파일을 아이패드에서 가져오면 맞춰져요.</p>
+    <div class="row">
+      <button class="btn small" id="exportBtn">내보내기</button>
+      <label class="btn small">가져오기<input type="file" id="importFile" accept=".json,application/json" hidden></label>
+    </div>
+    <p class="muted">GitHub의 data/cards.json에 영구 저장할 카드: <button class="btn small" id="exportCards">확정 카드만 JSON으로</button></p>
+  </section>
+</main>
+
+<nav class="tabs no-print">
+  <button data-tab="cards" class="active">카드</button>
+  <button data-tab="walk">걷기</button>
+  <button data-tab="review">검수<span id="pendingBadge" class="badge"></span></button>
+  <button data-tab="sheet">학습지</button>
+  <button data-tab="data">추가·백업</button>
+</nav>
+
+<!-- 걷기 전체화면 -->
+<div id="walkScreen" class="walk hidden no-print">
+  <div class="wmeta" id="wMeta"></div>
+  <div class="wq" id="wQ"></div>
+  <div class="wa" id="wA"></div>
+  <div class="wstatus" id="wStatus"></div>
+  <button class="btn wstop" id="wStop">■ 그만</button>
+</div>
+
+<!-- 인쇄용 A4 -->
+<div id="sheet" class="sheet"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
