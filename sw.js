@@ -1,5 +1,5 @@
 // 오프라인 실행용. 앱 파일을 고치면 VERSION 숫자를 올리세요.
-const VERSION = 'v2';
+const VERSION = 'v3';
 const SHELL = ['./', './index.html', './style.css', './app.js', './manifest.json', './icon.svg', './data/cards.json', './data/summaries.json', './vocab.html'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL))); self.skipWaiting(); });
 self.addEventListener('activate', e => {

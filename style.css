@@ -21,6 +21,11 @@ textarea{width:100%;font-family:ui-monospace,monospace;font-size:13px}
 .card .meta{color:#94a3b8;font-size:13px}
 .card .q{font-size:22px;line-height:1.5;font-weight:600}
 .card .a{font-size:22px;color:#facc15;line-height:1.5}
+.card .exp{font-size:15px;line-height:1.6;color:#cbd5e1;border-top:1px dashed #475569;padding-top:12px;white-space:pre-wrap}
+#cExpBtn{margin-top:4px}
+#expEdit textarea{font-family:inherit;font-size:15px;margin-top:8px}
+.wexp{font-size:18px;color:#cbd5e1;line-height:1.5;margin-top:12px;white-space:pre-wrap}
+.sheet .ex{font-size:9pt;color:#444;margin:2px 0 6px 14px;white-space:pre-wrap}
 .card .hint{color:#64748b;font-size:13px}
 .tabs{position:fixed;bottom:0;left:0;right:0;display:flex;background:#020617;border-top:1px solid #1e293b;padding-bottom:env(safe-area-inset-bottom)}
 .tabs button{flex:1;background:none;border:0;color:#94a3b8;padding:14px 0;font-size:14px;position:relative}
@@ -63,3 +68,20 @@ textarea{width:100%;font-family:ui-monospace,monospace;font-size:13px}
   .page{margin:0;width:210mm;min-height:auto;box-shadow:none}
   .page + .page{break-before:page;page-break-before:always}
 }
+
+.vlink{color:#facc15;font-size:13px;text-decoration:none;margin-right:6px}
+.card{position:relative}
+.star{position:absolute;top:10px;right:12px;background:none;border:0;color:#facc15;font-size:26px;cursor:pointer}
+.btn.mid{background:#ca8a04}
+.row .btn.mid{flex:1;padding:18px}
+.scard{background:#1e293b;border-radius:12px;margin:10px 0;padding:12px}
+.scard summary{cursor:pointer;font-weight:700;font-size:16px}
+.scard .smeta{font-size:12px;color:#94a3b8;margin:2px 0 0}
+.sbody{line-height:1.7;font-size:15px;margin-top:10px}
+.sbody h4{margin:12px 0 4px;color:#facc15}
+.sbody ul{margin:4px 0;padding-left:20px}
+.scard textarea{font-family:inherit;font-size:14px;margin-top:8px}
+.page .sbody{font-size:10.5pt;line-height:1.65}
+.page .sbody h4{color:#000;border-left:3px solid #000;padding-left:6px}
+.page .sumsec{break-inside:auto;margin-bottom:8mm}
+.page .sumsec h3{font-size:13pt;margin:0 0 2px}

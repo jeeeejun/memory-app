@@ -12,8 +12,13 @@ let baseCards = [];                       // data/cards.json
 let localCards = LS.get('ma_cards', {});  // 기기에서 추가·수정한 카드 {id: card}
 let deleted = LS.get('ma_deleted', []);   // 삭제한 id
 let prog = LS.get('ma_prog', {});         // {id: {step, due, wrong}}
+let stars = LS.get('ma_stars', []);       // ★ 표시한 카드 id
+let baseSums = [];                        // data/summaries.json
+let localSums = LS.get('ma_sums', {});    // 기기에서 추가한 요약 {id: summary}
+let delSums = LS.get('ma_delsums', []);
 
-function saveAll() { LS.set('ma_cards', localCards); LS.set('ma_deleted', deleted); LS.set('ma_prog', prog); }
+function saveAll() { LS.set('ma_cards', localCards); LS.set('ma_deleted', deleted); LS.set('ma_prog', prog); LS.set('ma_stars', stars); LS.set('ma_sums', localSums); LS.set('ma_delsums', delSums); }
+function allSums() { const m = {}; baseSums.forEach(s => m[s.id] = s); Object.values(localSums).forEach(s => m[s.id] = s); return Object.values(m).filter(s => !delSums.includes(s.id)).sort((a, b) => (b.lessonDate || '').localeCompare(a.lessonDate || '')); }
 function today() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
 function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
@@ -32,26 +37,29 @@ function filterCards(subject, scope) {
   if (scope === 'due') list = list.filter(c => !prog[c.id] || prog[c.id].due <= now);
   if (scope === 'wrong') list = list.filter(c => prog[c.id] && prog[c.id].wrong > 0);
   if (scope === 'today') list = list.filter(c => c.lessonDate === today());
+  if (scope === 'star') list = list.filter(c => stars.includes(c.id));
   return list;
 }
 function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 
+// known: true(알았다) / 'mid'(애매: 내일 다시, 단계 유지) / false(몰랐다)
 function grade(id, known) {
   const p = prog[id] || { step: 0, due: 0, wrong: 0 };
-  if (known) { p.due = Date.now() + INTERVALS[Math.min(p.step, INTERVALS.length - 1)] * DAY; p.step++; if (p.wrong > 0) p.wrong--; }
+  if (known === 'mid') { p.due = Date.now() + 1 * DAY; p.step = Math.max(0, p.step - 1); }
+  else if (known) { p.due = Date.now() + INTERVALS[Math.min(p.step, INTERVALS.length - 1)] * DAY; p.step++; if (p.wrong > 0) p.wrong--; }
   else { p.step = 0; p.due = Date.now() + 1 * DAY; p.wrong = (p.wrong || 0) + 1; }
   prog[id] = p; saveAll();
 }
 
 /* ===== 공통 UI ===== */
-function subjects() { return [...new Set(allCards().map(c => c.subject).filter(Boolean))]; }
+function subjects() { return [...new Set([...allCards(), ...allSums()].map(c => c.subject).filter(Boolean))]; }
 function fillSubjectSelect(sel) {
   const cur = sel.value;
   sel.innerHTML = '<option value="*">전체 과목</option>' + subjects().map(s => `<option>${esc(s)}</option>`).join('');
   if ([...sel.options].some(o => o.value === cur)) sel.value = cur;
 }
 function refreshCommon() {
-  ['fSubject', 'wSubject', 'sSubject'].forEach(id => fillSubjectSelect($(id)));
+  ['fSubject', 'wSubject', 'sSubject', 'mSubject'].forEach(id => fillSubjectSelect($(id)));
   fillUnits();
   const pend = allCards().filter(c => c.status !== '확정').length;
   $('pendingBadge').textContent = pend || '';
@@ -64,6 +72,7 @@ document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
   $('sheet').classList.toggle('show', b.dataset.tab === 'sheet' && $('sheet').innerHTML !== '');
   if (b.dataset.tab === 'cards') startDeck();
   if (b.dataset.tab === 'review') renderReview();
+  if (b.dataset.tab === 'sum') renderSums();
   refreshCommon();
 });
 
@@ -76,7 +85,8 @@ function startDeck() {
 }
 function showCard() {
   shown = false;
-  $('cA').classList.add('hidden'); $('cHint').classList.remove('hidden');
+  $('cA').classList.add('hidden'); $('cExp').classList.add('hidden'); $('cHint').classList.remove('hidden');
+  $('expEdit').classList.add('hidden'); $('cExpBtn').classList.toggle('hidden', di >= deck.length); $('cStar').classList.toggle('hidden', di >= deck.length);
   if (di >= deck.length) {
     $('cMeta').textContent = ''; $('cQ').textContent = deck.length ? '이번 묶음 끝! 🎉' : '볼 카드가 없어요';
     $('cHint').textContent = deck.length ? '' : '범위를 바꾸거나 검수 탭에서 카드를 확정하세요';
@@ -84,14 +94,31 @@ function showCard() {
   }
   const c = deck[di];
   $('cMeta').textContent = [c.subject, c.unit, c.lessonDate].filter(Boolean).join(' · ');
-  $('cQ').textContent = c.q; $('cA').textContent = c.a; $('cHint').textContent = '탭해서 답 보기';
+  const rev = $('fReverse').checked;
+  $('cQ').textContent = rev ? c.a : c.q; $('cA').textContent = rev ? c.q : c.a; $('cHint').textContent = '탭해서 답 보기';
+  $('cExp').textContent = c.exp ? '💡 ' + c.exp : '';
+  $('cExpBtn').textContent = c.exp ? '✏️ 해설 고치기' : '✏️ 해설 쓰기';
+  $('cStar').textContent = stars.includes(c.id) ? '★' : '☆';
   $('cProgress').textContent = `${di + 1} / ${deck.length}`;
 }
-$('cardBox').onclick = () => { if (di < deck.length) { shown = !shown; $('cA').classList.toggle('hidden', !shown); $('cHint').classList.toggle('hidden', shown); } };
+$('cardBox').onclick = e => { if (e.target.id === 'cStar') return; if (di < deck.length) { shown = !shown; $('cA').classList.toggle('hidden', !shown); $('cExp').classList.toggle('hidden', !shown || !deck[di].exp); $('cHint').classList.toggle('hidden', shown); } };
+$('cStar').onclick = e => { e.stopPropagation(); const id = deck[di]?.id; if (!id) return; stars = stars.includes(id) ? stars.filter(x => x !== id) : [...stars, id]; saveAll(); $('cStar').textContent = stars.includes(id) ? '★' : '☆'; };
+// 해설 쓰기: 기기에 저장되고, 검수 탭·학습지 답지·걷기 모드에도 반영
+$('cExpBtn').onclick = () => { const c = deck[di]; if (!c) return; $('expBox').value = c.exp || ''; $('expEdit').classList.remove('hidden'); $('expBox').focus(); };
+$('expCancel').onclick = () => $('expEdit').classList.add('hidden');
+$('expSave').onclick = () => {
+  const c = deck[di]; if (!c) return;
+  const nc = { ...allCards().find(x => x.id === c.id), exp: $('expBox').value.trim() };
+  upsert(nc); deck[di] = nc; $('expEdit').classList.add('hidden');
+  $('cExp').textContent = nc.exp ? '💡 ' + nc.exp : ''; $('cExp').classList.toggle('hidden', !nc.exp);
+  $('cA').classList.remove('hidden'); $('cHint').classList.add('hidden'); shown = true;
+  $('cExpBtn').textContent = nc.exp ? '✏️ 해설 고치기' : '✏️ 해설 쓰기';
+};
 function answerCard(k) { if (di >= deck.length) return; grade(deck[di].id, k); di++; showCard(); refreshCommon(); }
 $('bRight').onclick = () => answerCard(true);
 $('bWrong').onclick = () => answerCard(false);
-['fSubject', 'fScope', 'fShuffle'].forEach(id => $(id).onchange = startDeck);
+$('bMid').onclick = () => answerCard('mid');
+['fSubject', 'fScope', 'fShuffle', 'fReverse'].forEach(id => $(id).onchange = startDeck);
 
 /* ===== 걷기 모드 ===== */
 let walking = false, wDeck = [], wi = 0, wResolve = null, wakeLock = null, koVoice = null;
@@ -115,12 +142,13 @@ async function walkLoop() {
   while (walking && wi < wDeck.length) {
     const c = wDeck[wi];
     $('wMeta').textContent = `${wi + 1}/${wDeck.length} · ${[c.subject, c.unit].filter(Boolean).join(' · ')}`;
-    $('wQ').textContent = c.q; $('wA').textContent = ''; $('wStatus').textContent = '문제';
+    $('wQ').textContent = c.q; $('wA').textContent = ''; $('wExp').textContent = ''; $('wStatus').textContent = '문제';
     const myIdx = wi;
     let act = await Promise.race([speak(c.q).then(() => (walking && wi === myIdx && wResolve) ? waitInput(pause) : new Promise(() => { })), new Promise(r => { wResolve = r; })]);
     if (!walking) return;
     $('wA').textContent = c.a; $('wStatus').textContent = '정답 — 탭: 알았다 / ← 밀기: 몰랐다';
-    if (act === 'timeout') { await speak('정답. ' + c.a); if (!walking) return; act = await waitInput(5000); }
+    $('wExp').textContent = c.exp ? '💡 ' + c.exp : '';
+    if (act === 'timeout') { await speak('정답. ' + c.a); if (!walking) return; if ($('wReadExp').checked && c.exp) { await speak('해설. ' + c.exp); if (!walking) return; } act = await waitInput(5000); }
     if (!walking) return;
     if (act === 'know') grade(c.id, true);
     else if (act === 'wrong') { grade(c.id, false); await speak('다시 볼게요'); }
@@ -164,6 +192,7 @@ function renderReview() {
       <div class="tag">${esc(c.status || '검수대기')} · ${esc(c.subject)} · ${esc(c.unit)} · ${esc(c.lessonDate || '')} · ${esc(c.source || '')}</div>
       <label>문제</label><input type="text" data-k="q" value="${esc(c.q)}">
       <label>답</label><input type="text" data-k="a" value="${esc(c.a)}">
+      <label>해설 (선택)</label><textarea data-k="exp" rows="3">${esc(c.exp || '')}</textarea>
       <label>원문 문장 (빈칸 학습지용)</label><input type="text" data-k="sentence" value="${esc(c.sentence || '')}">
       <label>빈칸 키워드 (쉼표로 구분)</label><input type="text" data-k="blanks" value="${esc((c.blanks || []).join(', '))}">
       <div class="row">
@@ -174,7 +203,7 @@ function renderReview() {
     </div>`).join('') : '<p class="muted">검수할 카드가 없어요.</p>';
 }
 function readEdit(box, c) {
-  box.querySelectorAll('input[data-k]').forEach(i => {
+  box.querySelectorAll('[data-k]').forEach(i => {
     c[i.dataset.k] = i.dataset.k === 'blanks' ? i.value.split(',').map(s => s.trim()).filter(Boolean) : i.value.trim();
   });
   return c;
@@ -198,7 +227,13 @@ $('rConfirmAll').onclick = () => {
 $('pasteAdd').onclick = () => {
   let txt = $('pasteBox').value.trim().replace(/^```(json)?/i, '').replace(/```$/, '').trim();
   let arr;
-  try { arr = JSON.parse(txt); if (!Array.isArray(arr)) arr = [arr]; }
+  let sums = [];
+  try {
+    const d = JSON.parse(txt);
+    if (Array.isArray(d)) arr = d;
+    else if (d.cards || d.summary || d.summaries) { arr = d.cards || []; sums = d.summaries || (d.summary ? [d.summary] : []); }
+    else arr = [d];
+  }
   catch { $('pasteMsg').textContent = '❌ JSON 형식이 아니에요. AI에게 "JSON 배열로만 다시 출력해줘"라고 요청하세요.'; return; }
   let n = 0;
   arr.forEach((c, i) => {
@@ -211,17 +246,35 @@ $('pasteAdd').onclick = () => {
     deleted = deleted.filter(d => d !== c.id);
     upsert(c); n++;
   });
-  $('pasteMsg').textContent = `✅ ${n}개 추가됨 → '검수' 탭에서 확인 후 확정하세요.`;
+  let m = 0;
+  sums.forEach((s, i) => {
+    if (!s || !s.body) return;
+    s.id = s.id || `s-${Date.now()}-${i}`; s.lessonDate = s.lessonDate || today();
+    s.subject = s.subject || arr[0]?.subject || ''; s.unit = s.unit || arr[0]?.unit || '';
+    s.title = s.title || [s.subject, s.unit, s.lessonDate].filter(Boolean).join(' · ');
+    delSums = delSums.filter(d => d !== s.id); localSums[s.id] = s; m++;
+  });
+  saveAll();
+  $('pasteMsg').textContent = `✅ 요약본 ${m}개 · 카드 ${n}개 추가됨 → 요약은 '요약' 탭, 카드는 '검수' 탭에서 확인 후 확정하세요.`;
   $('pasteBox').value = ''; refreshCommon();
 };
 
-const PROMPT = `이 사진의 수업 내용만 근거로 암기 카드를 만들어줘.
+const PROMPT = `이 사진의 수업 내용만 근거로 "총 요약본"과 "암기 카드" 두 가지를 만들어줘.
 - 사진에 없는 내용은 절대 추가하지 마. 글씨가 안 보이는 부분은 "판독불가"로 써.
-- 과목: 한국사 / 단원: ○○ / 수업일: ${'YYYY-MM-DD'} / 출처: 필기 p.○
-- 문제(q)는 걸으면서 들어도 이해되게 짧게, 답(a)은 한 단어~한 문장.
-- sentence: 사진 속 핵심 문장 원문 그대로, blanks: 그 문장에서 빈칸으로 뺄 핵심어(문장에 그대로 들어있는 단어).
-- 출력은 아래 형식의 JSON 배열로만, 설명 없이:
-[{"subject":"","unit":"","lessonDate":"","q":"","a":"","sentence":"","blanks":[""],"source":"","status":"검수대기"}]`;
+- 과목: 한국사 / 단원: ○○ / 수업일: YYYY-MM-DD / 출처: 필기 p.○
+
+[총 요약본 summary]
+- 수업 흐름 순서대로 정리. body 안에서 "## 소제목", "- 항목" 형식만 사용하고 줄바꿈은 \n.
+- 선생님이 강조한 부분은 앞에 ★ 표시.
+
+[암기 카드 cards]
+- q: 걸으면서 들어도 이해되게 짧게, a: 한 단어~한 문장.
+- exp: 사진에 나온 이유·배경·헷갈리는 점 (없으면 빈 문자열).
+- sentence: 사진 속 핵심 문장 원문 그대로, blanks: 그 문장에 그대로 들어있는 핵심어.
+
+출력은 아래 JSON 하나로만, 설명 없이:
+{"summary":{"subject":"","unit":"","lessonDate":"","title":"","body":"## 소제목\n- 내용","source":""},
+ "cards":[{"subject":"","unit":"","lessonDate":"","q":"","a":"","exp":"","sentence":"","blanks":[""],"source":"","status":"검수대기"}]}`;
 $('promptBox').value = PROMPT;
 $('copyPrompt').onclick = async () => { try { await navigator.clipboard.writeText(PROMPT); alert('복사됨'); } catch { $('promptBox').select(); document.execCommand('copy'); } };
 
@@ -231,7 +284,8 @@ function download(name, obj) {
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
-$('exportBtn').onclick = () => download(`암기장-백업-${today()}.json`, { localCards, deleted, prog });
+$('exportBtn').onclick = () => download(`암기장-백업-${today()}.json`, { localCards, deleted, prog, stars, localSums, delSums });
+$('exportSums').onclick = () => download('summaries.json', allSums());
 $('exportCards').onclick = () => download('cards.json', confirmed());
 $('importFile').onchange = async e => {
   const f = e.target.files[0]; if (!f) return;
@@ -239,6 +293,7 @@ $('importFile').onchange = async e => {
     const d = JSON.parse(await f.text());
     Object.assign(localCards, d.localCards || {});
     deleted = [...new Set([...deleted, ...(d.deleted || [])])];
+    Object.assign(localSums, d.localSums || {}); delSums = [...new Set([...delSums, ...(d.delSums || [])])]; stars = [...new Set([...stars, ...(d.stars || [])])];
     for (const [id, p] of Object.entries(d.prog || {})) if (!prog[id] || (p.due || 0) > (prog[id].due || 0)) prog[id] = p;
     saveAll(); refreshCommon(); alert('가져오기 완료');
   } catch { alert('백업 파일을 읽지 못했어요'); }
@@ -299,15 +354,74 @@ $('sMake').onclick = () => {
     }
   });
   let html = `<div class="page">${head(title)}${body}</div>`;
-  if ($('sAnswer').checked && type !== 'bbak') html += `<div class="page">${head(title + ' — 답지')}${ans.map(a => `<div class="item">${a}</div>`).join('')}</div>`;
+  const withExp = $('sExp').checked;
+  if ($('sAnswer').checked && (type !== 'bbak' || withExp)) html += `<div class="page">${head(title + ' — 답지')}${ans.map((a, i) => `<div class="item">${a}${withExp && list[i].exp ? `<div class="ex">💡 ${esc(list[i].exp)}</div>` : ''}</div>`).join('')}</div>`;
   $('sheet').innerHTML = html; $('sheet').classList.add('show');
   $('sheet').scrollIntoView({ behavior: 'smooth' });
 };
 $('sPrint').onclick = () => { if (!$('sheet').innerHTML) $('sMake').onclick(); if ($('sheet').innerHTML) window.print(); };
 
+/* ===== 요약본 ===== */
+function mdLite(t) {
+  const out = []; let ul = false;
+  String(t || '').split('\n').forEach(l => {
+    const s = l.trim();
+    if (/^[-•*]\s+/.test(s)) { if (!ul) { out.push('<ul>'); ul = true; } out.push('<li>' + esc(s.replace(/^[-•*]\s+/, '')) + '</li>'); return; }
+    if (ul) { out.push('</ul>'); ul = false; }
+    if (/^#{1,4}\s+/.test(s)) out.push('<h4>' + esc(s.replace(/^#+\s+/, '')) + '</h4>');
+    else if (s) out.push('<p>' + esc(s) + '</p>');
+  });
+  if (ul) out.push('</ul>');
+  return out.join('').replace(/★/g, '<b>★</b>');
+}
+function renderSums() {
+  const s = $('mSubject').value;
+  const list = allSums().filter(x => !s || s === '*' || x.subject === s);
+  $('sumList').innerHTML = list.length ? list.map(x => `
+    <details class="scard" data-id="${esc(x.id)}">
+      <summary><label onclick="event.stopPropagation()"><input type="checkbox" class="mpick"></label> ${esc(x.title || x.unit || '요약')}
+        <div class="smeta">${esc([x.subject, x.unit, x.lessonDate, x.source].filter(Boolean).join(' · '))}</div></summary>
+      <div class="sbody">${mdLite(x.body)}</div>
+      <div class="row"><button class="btn small" data-act="edit">수정</button><button class="btn small bad" data-act="del">삭제</button></div>
+      <div class="sedit hidden">
+        <input type="text" data-k="title" value="${esc(x.title || '')}" style="width:100%" placeholder="제목">
+        <textarea data-k="body" rows="12">${esc(x.body || '')}</textarea>
+        <div class="row"><button class="btn small good" data-act="save">저장</button></div>
+      </div>
+    </details>`).join('') : '<p class="muted">아직 요약본이 없어요. 추가·백업 탭에서 AI 결과를 붙여넣거나 "+ 요약 직접 쓰기"를 누르세요.</p>';
+}
+$('mSubject').onchange = renderSums;
+$('sumList').onclick = e => {
+  const act = e.target.dataset.act; if (!act) return;
+  const box = e.target.closest('.scard'), id = box.dataset.id;
+  const x = { ...allSums().find(v => v.id === id) };
+  if (act === 'edit') { box.querySelector('.sedit').classList.toggle('hidden'); return; }
+  if (act === 'del') { if (!confirm('이 요약본을 삭제할까요?')) return; delSums.push(id); delete localSums[id]; }
+  if (act === 'save') { box.querySelectorAll('.sedit [data-k]').forEach(i => x[i.dataset.k] = i.value); localSums[id] = x; }
+  saveAll(); renderSums();
+};
+$('mNew').onclick = () => {
+  const subj = prompt('과목?', $('mSubject').value !== '*' ? $('mSubject').value : ''); if (subj === null) return;
+  const unit = prompt('단원?', '') ?? '';
+  const id = 's-' + Date.now();
+  localSums[id] = { id, subject: subj, unit, lessonDate: today(), title: [subj, unit, today()].filter(Boolean).join(' · '), body: '## 소제목\n- 내용' };
+  saveAll(); refreshCommon(); renderSums();
+  const box = document.querySelector(`.scard[data-id="${id}"]`); if (box) { box.open = true; box.querySelector('.sedit').classList.remove('hidden'); }
+};
+$('mPrint').onclick = () => {
+  let ids = [...document.querySelectorAll('.scard')].filter(b => b.querySelector('.mpick').checked).map(b => b.dataset.id);
+  if (!ids.length) { if (!confirm('체크한 요약이 없어요. 보이는 요약을 모두 저장할까요?')) return; ids = [...document.querySelectorAll('.scard')].map(b => b.dataset.id); }
+  const list = allSums().filter(x => ids.includes(x.id)).reverse();
+  if (!list.length) return;
+  $('sheet').innerHTML = `<div class="page"><div class="ph"><h3>수업 총 요약본</h3><div class="info">${list.length}개 수업 · 출력 ${today()}</div></div>` +
+    list.map(x => `<div class="sumsec"><h3>${esc(x.title || x.unit)}</h3><div class="info" style="font-size:8.5pt;color:#555">${esc([x.subject, x.unit, x.lessonDate, x.source].filter(Boolean).join(' · '))}</div><div class="sbody">${mdLite(x.body)}</div></div>`).join('') + '</div>';
+  $('sheet').classList.add('show'); setTimeout(() => window.print(), 100);
+};
+
 /* ===== 시작 ===== */
 async function init() {
   try { const r = await fetch('data/cards.json', { cache: 'no-cache' }); baseCards = await r.json(); } catch { baseCards = []; }
+  try { const r = await fetch('data/summaries.json', { cache: 'no-cache' }); baseSums = await r.json(); } catch { baseSums = []; }
   refreshCommon(); startDeck();
 }
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => { });
