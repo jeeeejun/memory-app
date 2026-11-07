@@ -63,6 +63,7 @@
   --line:#3a3f49; --gold:#d4ab4c; --red:#e27367; --blue:#7fa6e6; --green:#78b487;
   --chip:#2a2d34; --hl:#4a4224; --shadow:0 1px 0 rgba(0,0,0,.3),0 6px 18px rgba(0,0,0,.35); color-scheme:dark}
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.55}
 .wrap{max-width:760px;margin:0 auto;padding-block:20px 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:18px}
 h1{font-family:var(--serif);font-size:1.7rem;margin:0;text-wrap:balance;letter-spacing:-.01em}
@@ -89,6 +90,17 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .tab{border:0;background:none;padding:12px 2px;font-size:.95rem;color:var(--muted);border-bottom:4px solid transparent;margin-bottom:-2px;white-space:nowrap}
 .tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--red);font-weight:700}
 .panel{display:flex;flex-direction:column;gap:14px}
+/* 메뉴(홈) → 각 페이지 */
+.menu{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.mtile{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 14px;min-height:108px;box-shadow:var(--shadow);color:var(--ink);text-decoration:none;font:inherit;cursor:pointer}
+.mtile:active{transform:scale(.98)}
+.mtile .ic{font-size:1.6rem;line-height:1}
+.mtile b{font-family:var(--serif);font-size:1.15rem}
+.mtile small{color:var(--muted);font-size:.82rem;word-break:keep-all}
+.pagebar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--paper);display:flex;align-items:center;gap:10px;padding:8px 0 10px;border-bottom:2px solid var(--ink)}
+.pagebar h2{font-family:var(--serif);font-size:1.3rem;margin:0;flex:none}
+.pagebar .back{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:8px 14px;min-height:40px;font-size:.95rem;flex:none}
+.pagebar .pscope{margin-left:auto;font-size:.8rem;color:var(--muted);text-align:right;word-break:keep-all}
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .seg button{border:0;background:var(--card);padding:9px 14px;min-height:42px}
@@ -1798,11 +1810,21 @@ aquaculture|수산 양식
 </script>
 
 <div class="wrap">
+  <div id="home" class="panel" style="gap:18px">
   <header>
     <a href="index.html" style="display:inline-block;margin-bottom:8px;background:#0f172a;color:#facc15;padding:6px 10px;border-radius:10px;font:13px -apple-system,sans-serif;text-decoration:none">← 암기장</a>
     <h1>고1 영어 단어장</h1>
     <p class="sub">2026 고1 10월 모의고사 18–45번 · 빠바 07–08과 지문 어휘와 내용 정리</p>
   </header>
+
+  <nav class="menu" aria-label="학습 메뉴">
+    <button class="mtile" data-t="card"><span class="ic">🃏</span><b>카드</b><small>뒤집으며 외우기</small></button>
+    <button class="mtile" data-t="quiz"><span class="ic">✅</span><b>4지선다</b><small>뜻·단어 고르기</small></button>
+    <button class="mtile" data-t="spell"><span class="ic">✍️</span><b>철자</b><small>뜻 보고 영어로 쓰기</small></button>
+    <button class="mtile" data-t="list"><span class="ic">📖</span><b>단어장</b><small>목록·검색·뜻 가리기</small></button>
+    <button class="mtile" data-t="study"><span class="ic">📰</span><b>지문 학습</b><small>빠바 지문 흐름·해석</small></button>
+    <a class="mtile" href="english.html"><span class="ic">📝</span><b>영어 복습</b><small>어형변화 오답</small></a>
+  </nav>
 
   <div id="vocabTop" class="panel" style="gap:18px">
     <section class="progress" aria-label="암기 현황">
@@ -1811,6 +1833,7 @@ aquaculture|수산 양식
     </section>
 
     <section class="filters">
+      <div class="label" style="font-size:.9rem;color:var(--ink);letter-spacing:0">공부할 범위</div>
       <div>
         <div class="label">자료</div>
         <div class="seg" id="srcSeg">
@@ -1828,19 +1851,20 @@ aquaculture|수산 양식
         <button class="chip alt" id="fStar" aria-pressed="false">★ 표시만</button>
       </div>
       <div class="count" id="count"></div>
+      <p class="tip" style="margin:0">여기서 고른 범위가 카드·4지선다·철자·단어장에 똑같이 적용돼요.</p>
     </section>
   </div>
 
-  <nav class="tabs" role="tablist">
-    <button class="tab" role="tab" data-t="card" aria-selected="true">카드</button>
-    <button class="tab" role="tab" data-t="quiz" aria-selected="false">4지선다</button>
-    <button class="tab" role="tab" data-t="spell" aria-selected="false">철자</button>
-    <button class="tab" role="tab" data-t="list" aria-selected="false">단어장</button>
-    <button class="tab" role="tab" data-t="study" aria-selected="false">지문 학습</button>
-  </nav>
+  </div>
+
+  <div class="pagebar" id="pagebar" hidden>
+    <button class="back" id="backBtn" aria-label="메뉴로">‹ 메뉴</button>
+    <h2 id="pageTitle"></h2>
+    <span class="pscope" id="pageScope"></span>
+  </div>
 
   <!-- CARD -->
-  <section class="panel" id="p-card">
+  <section class="panel" id="p-card" hidden>
     <div class="row">
       <div class="seg" id="cardDir">
         <button aria-pressed="true" data-v="en">영 → 한</button>
@@ -2010,16 +2034,36 @@ function seg(id, onChange) {
 seg("srcSeg", v => setSource(v));
 
 /* ---------- tabs ---------- */
-let tab = "card";
-function showTab(t) {
+/* 홈(메뉴) ↔ 페이지: 주소 #card 처럼 바뀌어서 뒤로 가기(스와이프)도 됨 */
+const PAGES = { card: "카드", quiz: "4지선다", spell: "철자", list: "단어장", study: "지문 학습" };
+let tab = "home", fromHome = false;
+function render(t) {
+  if (!PAGES[t]) t = "home";
   tab = t;
-  document.querySelectorAll(".tab").forEach(x => x.setAttribute("aria-selected", x.dataset.t === t));
-  ["card", "quiz", "spell", "list", "study"].forEach(k => $("p-" + k).hidden = k !== t);
-  $("vocabTop").hidden = t === "study";
+  $("home").hidden = t !== "home";
+  $("pagebar").hidden = t === "home";
+  Object.keys(PAGES).forEach(k => $("p-" + k).hidden = k !== t);
+  if (t !== "home") {
+    $("pageTitle").textContent = PAGES[t];
+    $("pageScope").textContent = t === "study" ? "" : $("count").textContent;
+  }
+  if (t === "card") startCards();
+  if (t === "quiz") startQuiz();
+  if (t === "spell") startSpell();
   if (t === "list") renderList();
   if (t === "study") renderStudy();
+  window.scrollTo(0, 0);
 }
-document.querySelectorAll(".tab").forEach(t => t.onclick = () => showTab(t.dataset.t));
+function showTab(t) {
+  if (tab === "home" && t !== "home") fromHome = true;
+  if (location.hash.slice(1) === t) render(t); else location.hash = t === "home" ? "" : t;
+}
+window.addEventListener("hashchange", () => render(location.hash.slice(1)));
+document.querySelectorAll(".mtile[data-t]").forEach(t => t.onclick = () => showTab(t.dataset.t));
+$("backBtn").onclick = () => {
+  if (fromHome) { fromHome = false; history.back(); }
+  else { history.replaceState(null, "", location.pathname); render("home"); }
+};
 
 /* ---------- FLASHCARDS ---------- */
 const cardDir = seg("cardDir", () => startCards());
@@ -2275,5 +2319,5 @@ function renderStudy() {
 }
 
 function resetAll() { startCards(); startQuiz(); startSpell(); if (tab === "list") renderList(); }
-renderChips(); renderProgress(); resetAll();
+renderChips(); renderProgress(); resetAll(); render(location.hash.slice(1));
 </script>
