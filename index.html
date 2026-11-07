@@ -15,14 +15,42 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header class="top no-print">
-  <h1>암기장</h1>
-  <div><a href="vocab.html" class="vlink">📘 영어 단어장</a> <a href="english.html" class="vlink">📝 영어 복습</a> <span id="countInfo" class="muted"></span></div>
+<header class="top no-print" id="topBar">
+  <h1 id="subjTitle">암기장</h1>
+  <div><button class="vlink" id="pickBtn">⇄ 과목 바꾸기</button> <span id="countInfo" class="muted"></span></div>
 </header>
 
+<!-- 과목 선택 (처음 화면) -->
+<div id="picker" class="picker no-print hidden">
+  <h1>암기장</h1>
+  <p class="muted">공부할 과목을 고르세요.</p>
+  <div id="pickList" class="pgrid"></div>
+  <h2>영어</h2>
+  <div class="pgrid">
+    <a class="ptile" href="english.html"><span class="ic">📝</span><b>영어 복습</b><small>어형변화 오답</small></a>
+    <a class="ptile" href="vocab.html"><span class="ic">📘</span><b>영어 단어장</b><small>모고 · 빠바 단어</small></a>
+  </div>
+</div>
+
 <main class="no-print">
+  <!-- 빈칸 추론 -->
+  <section id="tab-blank" class="tab active">
+    <div class="chips" id="bUnits"></div>
+    <div class="filters">
+      <select id="bMode">
+        <option value="tap">탭해서 확인</option>
+        <option value="type">직접 쓰기</option>
+      </select>
+      <label class="chk"><input type="checkbox" id="bHint"> 초성 힌트</label>
+      <label class="chk"><input type="checkbox" id="bWrongOnly"> 틀린 것만</label>
+    </div>
+    <div class="bbar" id="bBar"></div>
+    <div id="blankBox"></div>
+    <p class="muted" id="bTip"></p>
+  </section>
+
   <!-- 카드 -->
-  <section id="tab-cards" class="tab active">
+  <section id="tab-cards" class="tab">
     <div class="filters">
       <select id="fSubject"></select>
       <select id="fScope">
@@ -146,7 +174,7 @@
     <p id="pasteMsg" class="muted"></p>
 
     <h2>사진 → 요약본 + 카드 요청문</h2>
-    <p class="muted">필기 사진과 함께 AI에게 보내세요. 과목·단원·수업일만 바꾸면 돼요.</p>
+    <p class="muted">교과서·필기 사진과 함께 AI에게 보내세요. <b>빨간 밑줄 친 부분만</b> 카드·빈칸으로 만들어요. 과목·단원·쪽수만 바꾸면 돼요.</p>
     <textarea id="promptBox" rows="10" readonly></textarea>
     <div class="row"><button class="btn small" id="copyPrompt">요청문 복사</button></div>
 
@@ -161,12 +189,13 @@
 </main>
 
 <nav class="tabs no-print">
-  <button data-tab="cards" class="active">카드</button>
-  <button data-tab="sum">요약</button>
+  <button data-tab="blank" class="active">빈칸</button>
+  <button data-tab="cards">카드</button>
   <button data-tab="walk">걷기</button>
-  <button data-tab="review">검수<span id="pendingBadge" class="badge"></span></button>
   <button data-tab="sheet">학습지</button>
-  <button data-tab="data">추가·백업</button>
+  <button data-tab="sum">요약</button>
+  <button data-tab="review">검수<span id="pendingBadge" class="badge"></span></button>
+  <button data-tab="data">추가</button>
 </nav>
 
 <!-- 걷기 전체화면 -->

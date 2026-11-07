@@ -16,8 +16,10 @@ let stars = LS.get('ma_stars', []);       // ★ 표시한 카드 id
 let baseSums = [];                        // data/summaries.json
 let localSums = LS.get('ma_sums', {});    // 기기에서 추가한 요약 {id: summary}
 let delSums = LS.get('ma_delsums', []);
+let curSubject = LS.get('ma_subject', null); // 처음 화면에서 고른 과목 (null = 아직 안 고름, '*' = 전체)
+let bWrong = LS.get('ma_bwrong', {});        // 빈칸 추론에서 틀린 빈칸 {카드id: [빈칸 번호...]}
 
-function saveAll() { LS.set('ma_cards', localCards); LS.set('ma_deleted', deleted); LS.set('ma_prog', prog); LS.set('ma_stars', stars); LS.set('ma_sums', localSums); LS.set('ma_delsums', delSums); }
+function saveAll() { LS.set('ma_bwrong', bWrong); LS.set('ma_cards', localCards); LS.set('ma_deleted', deleted); LS.set('ma_prog', prog); LS.set('ma_stars', stars); LS.set('ma_sums', localSums); LS.set('ma_delsums', delSums); }
 function allSums() { const m = {}; baseSums.forEach(s => m[s.id] = s); Object.values(localSums).forEach(s => m[s.id] = s); return Object.values(m).filter(s => !delSums.includes(s.id)).sort((a, b) => (b.lessonDate || '').localeCompare(a.lessonDate || '')); }
 function today() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
 function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
@@ -54,6 +56,9 @@ function grade(id, known) {
 /* ===== 공통 UI ===== */
 function subjects() { return [...new Set([...allCards(), ...allSums()].map(c => c.subject).filter(Boolean))]; }
 function fillSubjectSelect(sel) {
+  // 과목을 골랐으면 모든 탭이 그 과목만 보여 줌 (선택 상자는 숨김)
+  if (curSubject && curSubject !== '*') { sel.innerHTML = `<option>${esc(curSubject)}</option>`; sel.value = curSubject; sel.classList.add('hidden'); return; }
+  sel.classList.remove('hidden');
   const cur = sel.value;
   sel.innerHTML = '<option value="*">전체 과목</option>' + subjects().map(s => `<option>${esc(s)}</option>`).join('');
   if ([...sel.options].some(o => o.value === cur)) sel.value = cur;
@@ -63,14 +68,42 @@ function refreshCommon() {
   fillUnits();
   const pend = allCards().filter(c => c.status !== '확정').length;
   $('pendingBadge').textContent = pend || '';
-  $('countInfo').textContent = `확정 ${confirmed().length} · 오늘 복습 ${filterCards('*', 'due').length}`;
+  const sj = curSubject && curSubject !== '*' ? curSubject : '*';
+  $('subjTitle').textContent = sj === '*' ? '암기장 · 전체' : sj;
+  $('countInfo').textContent = `카드 ${filterCards(sj, 'all').length} · 오늘 복습 ${filterCards(sj, 'due').length}`;
 }
+
+/* ===== 처음 화면: 과목 고르기 ===== */
+function showPicker() {
+  const list = subjects();
+  $('pickList').innerHTML = list.map(s => {
+    const n = confirmed().filter(c => c.subject === s).length;
+    const units = new Set(confirmed().filter(c => c.subject === s).map(c => c.unit)).size;
+    return `<button class="ptile" data-s="${esc(s)}"><span class="ic">${SUBJ_ICON[s] || '📚'}</span><b>${esc(s)}</b><small>단원 ${units} · 카드 ${n}</small></button>`;
+  }).join('') + `<button class="ptile add" data-s="*"><span class="ic">＋</span><b>새 과목 추가</b><small>사진 → AI 결과 붙여넣기</small></button>`;
+  $('pickList').querySelectorAll('.ptile').forEach(b => b.onclick = () => pickSubject(b.dataset.s));
+  $('picker').classList.remove('hidden');
+  ['topBar'].forEach(id => $(id).classList.add('hidden'));
+  document.querySelector('main').classList.add('hidden'); document.querySelector('.tabs').classList.add('hidden');
+}
+const SUBJ_ICON = { '한국사': '🏛️', '수학': '📐', '통합과학': '🔬', '통합사회': '🌏', '국어': '📖', '영어': '🔤' };
+function pickSubject(s) {
+  curSubject = s; LS.set('ma_subject', s);
+  $('picker').classList.add('hidden'); $('topBar').classList.remove('hidden');
+  document.querySelector('main').classList.remove('hidden'); document.querySelector('.tabs').classList.remove('hidden');
+  bUnit = null; refreshCommon();
+  goTab(s === '*' ? 'data' : 'blank');
+}
+$('pickBtn').onclick = showPicker;
+function goTab(t) { document.querySelector(`.tabs button[data-tab="${t}"]`).click(); }
 
 document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
   document.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('active', x === b));
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.id === 'tab-' + b.dataset.tab));
   $('sheet').classList.toggle('show', b.dataset.tab === 'sheet' && $('sheet').innerHTML !== '');
   if (b.dataset.tab === 'cards') startDeck();
+  if (b.dataset.tab === 'blank') renderBlank();
+  window.scrollTo(0, 0);
   if (b.dataset.tab === 'review') renderReview();
   if (b.dataset.tab === 'sum') renderSums();
   refreshCommon();
@@ -119,6 +152,114 @@ $('bRight').onclick = () => answerCard(true);
 $('bWrong').onclick = () => answerCard(false);
 $('bMid').onclick = () => answerCard('mid');
 ['fSubject', 'fScope', 'fShuffle', 'fReverse'].forEach(id => $(id).onchange = startDeck);
+
+/* ===== 빈칸 추론 ===== */
+// 문장을 [글자, 빈칸, 글자 ...] 조각으로 나눔. 빈칸끼리 겹치면 긴 것을 우선.
+function segments(c) {
+  const s = c.sentence || '', taken = [];
+  (c.blanks || []).filter(Boolean).slice().sort((a, b) => b.length - a.length).forEach(k => {
+    let from = 0, i;
+    while ((i = s.indexOf(k, from)) >= 0) {
+      if (!taken.some(t => i < t.e && i + k.length > t.s)) { taken.push({ s: i, e: i + k.length, k }); break; }
+      from = i + 1;
+    }
+  });
+  taken.sort((a, b) => a.s - b.s);
+  const out = []; let pos = 0;
+  taken.forEach(t => { if (t.s > pos) out.push({ t: s.slice(pos, t.s) }); out.push({ b: t.k }); pos = t.e; });
+  if (pos < s.length) out.push({ t: s.slice(pos) });
+  return out;
+}
+const CHO = 'ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ';
+function chosung(w) { return [...w].map(ch => { const c = ch.charCodeAt(0) - 0xAC00; return c >= 0 && c < 11172 ? CHO[Math.floor(c / 588)] : ch; }).join(''); }
+const normAns = s => String(s).replace(/[\s·.,'"‘’“”()~-]/g, '').toLowerCase();
+const byOrder = (a, b) => (a.order ?? 1e9) - (b.order ?? 1e9) || (a.lessonDate || '').localeCompare(b.lessonDate || '') || (a.unit || '').localeCompare(b.unit || '') || String(a.id).localeCompare(String(b.id));
+
+let bUnit = null, bState = {}; // bState[카드id-번호] = 'shown' | 'ok' | 'no'
+function blankCards() {
+  return filterCards(curSubject && curSubject !== '*' ? curSubject : '*', 'all').filter(c => c.sentence && segments(c).some(x => x.b)).sort(byOrder);
+}
+function renderBlank() {
+  const all = blankCards();
+  const units = [...new Set(all.map(c => c.unit || '기타'))];
+  if (!units.includes(bUnit)) bUnit = units[0] || null;
+  const wrongN = u => all.filter(c => (c.unit || '기타') === u && (bWrong[c.id] || []).length).length;
+  $('bUnits').innerHTML = units.map(u => `<button class="chip ${u === bUnit ? 'on' : ''}" data-u="${esc(u)}">${esc(u)}${wrongN(u) ? ` <span style="color:#f87171">●${wrongN(u)}</span>` : ''}</button>`).join('');
+  $('bUnits').querySelectorAll('.chip').forEach(b => b.onclick = () => { bUnit = b.dataset.u; bState = {}; renderBlank(); window.scrollTo(0, 0); });
+  const onChip = $('bUnits').querySelector('.on'); if (onChip) $('bUnits').scrollLeft = onChip.offsetLeft - 20;
+  let list = all.filter(c => (c.unit || '기타') === bUnit);
+  if ($('bWrongOnly').checked) list = list.filter(c => (bWrong[c.id] || []).length);
+  const type = $('bMode').value === 'type', hint = $('bHint').checked;
+  if (!list.length) {
+    $('blankBox').innerHTML = `<p class="muted center" style="padding:30px 0">${all.length ? ($('bWrongOnly').checked ? '이 단원에 틀린 빈칸이 없어요 🎉' : '빈칸 문장이 없어요') : '이 과목에는 아직 빈칸 문장이 없어요. 추가 탭에서 사진 → AI 결과를 붙여넣으세요.'}</p>`;
+    $('bBar').innerHTML = ''; $('bTip').textContent = ''; return;
+  }
+  let html = '', topic = null, n = 0;
+  list.forEach(c => {
+    if ((c.topic || '') !== topic) { topic = c.topic || ''; if (topic) html += `<div class="btopic">${esc(topic)}</div>`; }
+    const wr = bWrong[c.id] || [];
+    html += `<div class="bsent ${wr.length ? 'hasWrong' : ''}" data-id="${esc(c.id)}">` + segments(c).map((x, i) => {
+      if (x.t !== undefined) return esc(x.t);
+      n++; const key = `${c.id}-${i}`, st = bState[key];
+      const label = hint ? chosung(x.b) : '①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳'[(n - 1) % 20];
+      if (type) {
+        const w = Math.max(3.5, x.b.length * 0.95 + 1.2);
+        return `<input type="text" class="bin ${st || ''}" data-k="${key}" data-i="${i}" data-a="${esc(x.b)}" style="width:${w}em" placeholder="${esc(label)}" autocomplete="off" autocorrect="off" spellcheck="false">${st === 'no' ? `<span class="bfix">${esc(x.b)}</span>` : ''}`;
+      }
+      return `<button class="bk ${st || ''}" data-k="${key}" data-i="${i}" data-a="${esc(x.b)}" data-l="${esc(label)}">${st ? esc(x.b) : esc(label)}</button>`;
+    }).join('') + '</div>';
+  });
+  $('blankBox').innerHTML = html;
+  updateBlankBar(n, type);
+  $('bTip').innerHTML = type ? '빈칸에 답을 쓰고 <b>채점</b>을 누르세요. 띄어쓰기·가운뎃점(·)은 무시해요. 틀린 빈칸은 \'틀린 것만\'으로 다시 볼 수 있어요.'
+    : '빈칸을 누르면 답이 보여요. <b>한 번 더 누르면 \'몰랐음\'(빨강)</b>으로 표시되고, 다시 누르면 \'알았음\'(초록)으로 바뀌어요. 몰랐던 빈칸은 \'틀린 것만\'과 카드 탭의 \'몰랐던 카드\'에 모여요.';
+}
+function updateBlankBar(n, type) {
+  const vals = Object.values(bState);
+  const seen = vals.length, no = vals.filter(v => v === 'no').length;
+  $('bBar').innerHTML = `<span class="stat">빈칸 <b>${n}</b> · 확인 <b>${seen}</b> · 몰랐음 <b style="color:#f87171">${no}</b></span>` +
+    (type ? `<button class="btn small good" id="bCheck">채점</button>` : `<button class="btn small" id="bShowAll">모두 보기</button>`) +
+    `<button class="btn small" id="bHideAll">다시 가리기</button>`;
+  if ($('bCheck')) $('bCheck').onclick = checkTyped;
+  if ($('bShowAll')) $('bShowAll').onclick = () => { document.querySelectorAll('#blankBox .bk').forEach(b => { if (!bState[b.dataset.k]) bState[b.dataset.k] = 'shown'; }); renderBlank(); };
+  $('bHideAll').onclick = () => { bState = {}; renderBlank(); };
+}
+function markBlank(cardId, i, wrong) {
+  const set = new Set(bWrong[cardId] || []);
+  const had = set.size;
+  wrong ? set.add(+i) : set.delete(+i);
+  if (set.size) bWrong[cardId] = [...set]; else delete bWrong[cardId];
+  if (wrong && !had) grade(cardId, false);   // 처음 틀리면 '몰랐던 카드'로
+  saveAll();
+}
+$('blankBox').onclick = e => {
+  const b = e.target.closest('.bk'); if (!b) return;
+  const id = b.closest('.bsent').dataset.id, k = b.dataset.k, st = bState[k];
+  const next = !st ? 'shown' : st === 'shown' || st === 'ok' ? 'no' : 'ok';
+  bState[k] = next;
+  if (next === 'no') markBlank(id, b.dataset.i, true);
+  if (next === 'ok') markBlank(id, b.dataset.i, false);
+  b.className = 'bk ' + next; b.textContent = b.dataset.a;
+  b.closest('.bsent').classList.toggle('hasWrong', !!(bWrong[id] || []).length);
+  updateBlankBar(document.querySelectorAll('#blankBox .bk').length, false);
+};
+$('blankBox').addEventListener('keydown', e => {
+  if (e.key !== 'Enter' || !e.target.classList.contains('bin')) return;
+  e.preventDefault(); const ins = [...document.querySelectorAll('#blankBox .bin')]; const nx = ins[ins.indexOf(e.target) + 1]; nx ? nx.focus() : checkTyped();
+});
+function checkTyped() {
+  const typed = {};
+  document.querySelectorAll('#blankBox .bin').forEach(inp => {
+    typed[inp.dataset.k] = inp.value;
+    if (!inp.value.trim()) return;
+    const ok = normAns(inp.value) === normAns(inp.dataset.a);
+    bState[inp.dataset.k] = ok ? 'ok' : 'no';
+    markBlank(inp.closest('.bsent').dataset.id, inp.dataset.i, !ok);
+  });
+  renderBlank();
+  document.querySelectorAll('#blankBox .bin').forEach(inp => { inp.value = typed[inp.dataset.k] || ''; });
+}
+['bMode', 'bHint', 'bWrongOnly'].forEach(id => $(id).onchange = () => { bState = {}; renderBlank(); });
 
 /* ===== 걷기 모드 ===== */
 let walking = false, wDeck = [], wi = 0, wResolve = null, wakeLock = null, koVoice = null;
@@ -243,6 +384,7 @@ $('pasteAdd').onclick = () => {
     c.status = c.status === '확정' ? '확정' : '검수대기';
     c.lessonDate = c.lessonDate || today();
     c.blanks = Array.isArray(c.blanks) ? c.blanks : [];
+    if (typeof c.order === 'number') c.order += Date.now() / 1000 | 0; // 새로 붙인 묶음은 기존 카드 뒤에 오게
     deleted = deleted.filter(d => d !== c.id);
     upsert(c); n++;
   });
@@ -259,23 +401,24 @@ $('pasteAdd').onclick = () => {
   $('pasteBox').value = ''; refreshCommon();
 };
 
-const PROMPT = `이 사진의 수업 내용만 근거로 "총 요약본"과 "암기 카드" 두 가지를 만들어줘.
-- 요약본·문제·답에는 사진에 없는 내용을 절대 추가하지 마. 글씨가 안 보이는 부분은 "판독불가"로 써.
-- 과목: 한국사 / 단원: ○○ / 수업일: YYYY-MM-DD / 출처: 필기 p.○
+const PROMPT = `첨부한 교과서·필기 사진으로 암기장 데이터를 만들어줘.
+- 과목: 한국사 / 단원: "03-1 4·19 혁명"처럼 번호+제목 / 쪽: p.○~○ / 수업일: YYYY-MM-DD
+- ★ 빨간 밑줄(빨간 펜) 친 부분만 사용해. 밑줄 없는 본문·사진 설명·탐구 활동은 빼.
+- 사진에 없는 내용은 절대 추가하지 마. 글씨가 안 보이면 "판독불가".
 
-[총 요약본 summary]
-- 수업 흐름 순서대로 정리. body 안에서 "## 소제목", "- 항목" 형식만 사용하고 줄바꿈은 \n.
-- 선생님이 강조한 부분은 앞에 ★ 표시.
+[cards] 밑줄 친 문장 하나 = 카드 하나, 교과서 순서대로
+- topic: 그 문장이 있는 교과서 소제목 (예: "3·15 부정 선거를 자행하다")
+- sentence: 밑줄 친 문장을 한 문장으로 (밑줄 앞뒤 몇 글자는 이어 써도 됨, 내용은 원문 그대로)
+- blanks: sentence 안에 글자 그대로 들어 있는 핵심어 1~4개 (사건명·인물·연도·제도 이름 우선)
+- q: 걸으면서 들어도 이해되는 짧은 질문, a: 짧은 답
+- exp: 사진 속 보충 설명(각주·사진 설명·손글씨 메모)이 있을 때만 1~2문장, 없으면 ""
+- order: 1부터 순서대로 번호
 
-[암기 카드 cards]
-- q: 걸으면서 들어도 이해되게 짧게, a: 한 단어~한 문장.
-- exp(해설): 모든 카드에 네가 직접 작성해 (빈 문자열 금지). 왜 그 답인지, 배경·원리, 헷갈리기 쉬운 점을 2~3문장으로.
-  사진 내용을 우선 쓰고, 사진에 없는 설명을 덧붙일 때는 그 문장 앞에 [보충]을 붙여. 해설은 내가 검수하면서 직접 고칠 초안이야.
-- sentence: 사진 속 핵심 문장 원문 그대로, blanks: 그 문장에 그대로 들어있는 핵심어.
+[summary] 단원 요약: body는 "## 소제목" 아래 "- 밑줄 문장" 형식, 줄바꿈은 \n
 
 출력은 아래 JSON 하나로만, 설명 없이:
-{"summary":{"subject":"","unit":"","lessonDate":"","title":"","body":"## 소제목\n- 내용","source":""},
- "cards":[{"subject":"","unit":"","lessonDate":"","q":"","a":"","exp":"","sentence":"","blanks":[""],"source":"","status":"검수대기"}]}`;
+{"summary":{"subject":"","unit":"","lessonDate":"","title":"","body":"## 소제목\n- 문장","source":"교과서 p.○ (빨간 밑줄)"},
+ "cards":[{"subject":"","unit":"","topic":"","order":1,"lessonDate":"","q":"","a":"","exp":"","sentence":"","blanks":[""],"source":"교과서 p.○ (빨간 밑줄)","status":"검수대기"}]}`;
 $('promptBox').value = PROMPT;
 $('copyPrompt').onclick = async () => { try { await navigator.clipboard.writeText(PROMPT); alert('복사됨'); } catch { $('promptBox').select(); document.execCommand('copy'); } };
 
@@ -318,17 +461,13 @@ function sheetCards() {
   if (r === 'today') list = list.filter(c => c.lessonDate === today());
   if (r === 'week') { const lim = Date.now() - 7 * DAY; list = list.filter(c => c.lessonDate && new Date(c.lessonDate).getTime() >= lim); }
   if (r === 'wrong') list = list.filter(c => prog[c.id] && prog[c.id].wrong > 0);
-  return list.sort((a, b) => (a.lessonDate || '').localeCompare(b.lessonDate || '') || (a.unit || '').localeCompare(b.unit || ''));
+  return list.sort(byOrder);
 }
 function blankHtml(c) {
-  let s = esc(c.sentence || ''), answers = [];
-  const keys = (c.blanks || []).filter(k => k && (c.sentence || '').includes(k));
-  if (!c.sentence || !keys.length) return { html: `${esc(c.q)} <span class="blank">&nbsp;</span>`, answers: [c.a] };
-  keys.sort((a, b) => b.length - a.length).forEach(k => {
-    s = s.split(esc(k)).join(`\u0000${answers.length}\u0000`); answers.push(k);
-  });
-  s = s.replace(/\u0000(\d+)\u0000/g, (_, i) => `<span class="blank">${'①②③④⑤⑥⑦⑧⑨⑩'[i] || ''}</span>`);
-  return { html: s, answers };
+  const seg = segments(c), answers = [];
+  if (!c.sentence || !seg.some(x => x.b)) return { html: `${esc(c.q)} <span class="blank">&nbsp;</span>`, answers: [c.a] };
+  const html = seg.map(x => x.t !== undefined ? esc(x.t) : `<span class="blank" style="min-width:${Math.min(70, Math.max(14, x.b.length * 3.4))}mm">${'①②③④⑤⑥⑦⑧⑨⑩'[answers.push(x.b) - 1] || ''}</span>`).join('');
+  return { html, answers };
 }
 function lines(n) { return '<div class="line"></div>'.repeat(n); }
 
@@ -339,9 +478,11 @@ $('sMake').onclick = () => {
   const subj = $('sSubject').value === '*' ? '전체 과목' : $('sSubject').value;
   const unit = $('sUnit').value === '*' ? '' : ' · ' + $('sUnit').value;
   const head = t => `<div class="ph"><h3>${esc(t)}</h3><div class="info">${esc(subj + unit)} · ${list.length}문항 · 날짜 ____ 점수 ____</div></div>`;
-  let body = '', ans = [];
+  let body = '', ans = [], lastU = null, lastT = null;
   list.forEach((c, i) => {
     const n = i + 1;
+    if (type === 'blank' && $('sUnit').value === '*' && c.unit !== lastU) { lastU = c.unit; lastT = null; body += `<div class="sunit">${esc(c.unit || '')}</div>`; }
+    if (type === 'blank' && c.topic && c.topic !== lastT) { lastT = c.topic; body += `<div class="stopic">${esc(c.topic)}</div>`; }
     if (type === 'blank') {
       const b = blankHtml(c);
       body += `<div class="item"><span class="n">${n}.</span>${b.html}</div>`;
@@ -424,6 +565,8 @@ async function init() {
   try { const r = await fetch('data/cards.json', { cache: 'no-cache' }); baseCards = await r.json(); } catch { baseCards = []; }
   try { const r = await fetch('data/summaries.json', { cache: 'no-cache' }); baseSums = await r.json(); } catch { baseSums = []; }
   refreshCommon(); startDeck();
+  if (!curSubject || (curSubject !== '*' && !subjects().includes(curSubject))) showPicker();
+  else renderBlank();
 }
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => { });
 init();
