@@ -1,8 +1,9 @@
 # 한국사 교과서 p.86~108 (03 민주화를 위한 노력, 04 산업화의 성과와 사회·문화의 변화)
-# 빨간 밑줄 친 부분만 옮긴 데이터. 실행하면 data/cards.json, data/summaries.json 에 반영됨.
+# 이번 포함 기준(MARK)에 해당하는 부분만 옮긴 데이터. 기준은 자료마다 다름. 실행하면 data/cards.json, data/summaries.json 에 반영됨.
 # 형식: (문장, [빈칸 핵심어], 질문, 답, 해설)
 import json, os
 SUBJ, DATE = "한국사", "2026-11-07"
+MARK = "빨간 밑줄"  # 이번 자료의 포함 기준
 U = []  # (unit, page, [(topic, [items])])
 
 U.append(("03-1 4·19 혁명", "p.86~88", [
@@ -243,10 +244,10 @@ for ui, (unit, page, topics) in enumerate(U):
             n += 1
             cards.append({"id": f"ks-{code}-{n:02d}", "subject": SUBJ, "unit": unit, "topic": topic, "order": (ui + 1) * 1000 + n,
                           "lessonDate": DATE, "q": q, "a": a, "exp": exp, "sentence": s, "blanks": blanks,
-                          "source": f"교과서 {page} (빨간 밑줄)", "status": "확정"})
+                          "source": f"교과서 {page} ({MARK})", "status": "확정"})
             body.append("- " + s)
     sums.append({"id": f"ks-sum-{code}", "subject": SUBJ, "unit": unit, "lessonDate": DATE, "title": unit,
-                 "body": "\n".join(body), "source": f"교과서 {page} (빨간 밑줄)"})
+                 "body": "\n".join(body), "source": f"교과서 {page} ({MARK})"})
 
 root = os.path.join(os.path.dirname(__file__), "..", "data")
 def merge(fname, new, prefix):
