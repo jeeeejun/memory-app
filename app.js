@@ -401,26 +401,36 @@ $('pasteAdd').onclick = () => {
   $('pasteBox').value = ''; refreshCommon();
 };
 
-const PROMPT = `첨부한 교과서·필기 사진으로 암기장 데이터를 만들어줘.
+// 외울 부분의 표시 기준은 매번 다름 (빨간 밑줄, 형광펜, 별표 등) → 입력한 기준을 요청문에 넣음
+function buildPrompt(rule) {
+  rule = (rule || '').trim();
+  const pick = rule
+    ? `- ★ 포함 기준: "${rule}" 부분만 사용해. 기준에 해당하지 않는 본문·사진 설명·탐구 활동은 빼.`
+    : `- ★ 포함 기준: 사진 속에 표시(밑줄·형광펜·별표·동그라미·손글씨 등)된 부분만 사용해. 어떤 표시를 기준으로 삼았는지 맨 앞 "rule"에 적어. 표시가 전혀 없으면 핵심 내용 위주로.`;
+  const tag = rule || '표시한 부분';
+  return `첨부한 교과서·필기 사진으로 암기장 데이터를 만들어줘.
 - 과목: 한국사 / 단원: "03-1 4·19 혁명"처럼 번호+제목 / 쪽: p.○~○ / 수업일: YYYY-MM-DD
-- ★ 빨간 밑줄(빨간 펜) 친 부분만 사용해. 밑줄 없는 본문·사진 설명·탐구 활동은 빼.
+${pick}
 - 사진에 없는 내용은 절대 추가하지 마. 글씨가 안 보이면 "판독불가".
 
-[cards] 밑줄 친 문장 하나 = 카드 하나, 교과서 순서대로
+[cards] 기준에 해당하는 문장 하나 = 카드 하나, 교과서 순서대로
 - topic: 그 문장이 있는 교과서 소제목 (예: "3·15 부정 선거를 자행하다")
-- sentence: 밑줄 친 문장을 한 문장으로 (밑줄 앞뒤 몇 글자는 이어 써도 됨, 내용은 원문 그대로)
+- sentence: 해당 문장을 한 문장으로 (표시 앞뒤 몇 글자는 이어 써도 됨, 내용은 원문 그대로)
 - blanks: sentence 안에 글자 그대로 들어 있는 핵심어 1~4개 (사건명·인물·연도·제도 이름 우선)
 - q: 걸으면서 들어도 이해되는 짧은 질문, a: 짧은 답
 - exp: 사진 속 보충 설명(각주·사진 설명·손글씨 메모)이 있을 때만 1~2문장, 없으면 ""
 - order: 1부터 순서대로 번호
 
-[summary] 단원 요약: body는 "## 소제목" 아래 "- 밑줄 문장" 형식, 줄바꿈은 \n
+[summary] 단원 요약: body는 "## 소제목" 아래 "- 문장" 형식, 줄바꿈은 \n
 
 출력은 아래 JSON 하나로만, 설명 없이:
-{"summary":{"subject":"","unit":"","lessonDate":"","title":"","body":"## 소제목\n- 문장","source":"교과서 p.○ (빨간 밑줄)"},
- "cards":[{"subject":"","unit":"","topic":"","order":1,"lessonDate":"","q":"","a":"","exp":"","sentence":"","blanks":[""],"source":"교과서 p.○ (빨간 밑줄)","status":"검수대기"}]}`;
-$('promptBox').value = PROMPT;
-$('copyPrompt').onclick = async () => { try { await navigator.clipboard.writeText(PROMPT); alert('복사됨'); } catch { $('promptBox').select(); document.execCommand('copy'); } };
+{"rule":"${tag}","summary":{"subject":"","unit":"","lessonDate":"","title":"","body":"## 소제목\n- 문장","source":"교과서 p.○ (${tag})"},
+ "cards":[{"subject":"","unit":"","topic":"","order":1,"lessonDate":"","q":"","a":"","exp":"","sentence":"","blanks":[""],"source":"교과서 p.○ (${tag})","status":"검수대기"}]}`;
+}
+$('markRule').value = LS.get('ma_markrule', '');
+const refreshPrompt = () => { LS.set('ma_markrule', $('markRule').value); $('promptBox').value = buildPrompt($('markRule').value); };
+$('markRule').oninput = refreshPrompt; refreshPrompt();
+$('copyPrompt').onclick = async () => { const t = buildPrompt($('markRule').value); try { await navigator.clipboard.writeText(t); alert('복사됨'); } catch { $('promptBox').select(); document.execCommand('copy'); } };
 
 /* ===== 백업 ===== */
 function download(name, obj) {
