@@ -185,6 +185,9 @@ input[type=text],input[type=search]{width:100%;font:inherit;font-size:1.15rem;pa
 .gp h5{margin:0;font-family:var(--serif);font-size:1.08rem}
 .gp p{margin:0;word-break:keep-all}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+/* 아이폰 두 번 탭 확대 막기 */
+html,body,button,a{touch-action:manipulation}
+select,textarea,input{font-size:max(16px,1em)}
 </style>
 
 <!-- ===================== 단어 데이터 (편집 가능) ===================== -->
