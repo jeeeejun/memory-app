@@ -16,7 +16,8 @@ let stars = LS.get('ma_stars', []);       // ★ 표시한 카드 id
 let baseSums = [];                        // data/summaries.json
 let localSums = LS.get('ma_sums', {});    // 기기에서 추가한 요약 {id: summary}
 let delSums = LS.get('ma_delsums', []);
-let curSubject = LS.get('ma_subject', null); // 처음 화면에서 고른 과목 (null = 아직 안 고름, '*' = 전체)
+const MANAGE = new URLSearchParams(location.search).has('manage');   // 검수·추가 화면 (manage.html 로 들어옴)
+let curSubject = MANAGE ? '*' : LS.get('ma_subject', null); // 처음 화면에서 고른 과목 (null = 아직 안 고름, '*' = 전체)
 let bWrong = LS.get('ma_bwrong', {});        // 빈칸 추론에서 틀린 빈칸 {카드id: [빈칸 번호...]}
 
 function saveAll() { LS.set('ma_bwrong', bWrong); LS.set('ma_cards', localCards); LS.set('ma_deleted', deleted); LS.set('ma_prog', prog); LS.set('ma_stars', stars); LS.set('ma_sums', localSums); LS.set('ma_delsums', delSums); }
@@ -64,13 +65,13 @@ function fillSubjectSelect(sel) {
   if ([...sel.options].some(o => o.value === cur)) sel.value = cur;
 }
 function refreshCommon() {
-  ['fSubject', 'wSubject', 'sSubject', 'mSubject'].forEach(id => fillSubjectSelect($(id)));
-  fillUnits();
+  ['fSubject', 'wSubject', 'mSubject'].forEach(id => fillSubjectSelect($(id)));
   const pend = allCards().filter(c => c.status !== '확정').length;
   $('pendingBadge').textContent = pend || '';
   const sj = curSubject && curSubject !== '*' ? curSubject : '*';
-  $('subjTitle').textContent = sj === '*' ? '암기장 · 전체' : sj;
-  $('countInfo').textContent = `카드 ${filterCards(sj, 'all').length} · 오늘 복습 ${filterCards(sj, 'due').length}`;
+  $('srcTab').classList.toggle('hidden', MANAGE || !baseSrcs.some(s => sj === '*' || s.subject === sj)); // 사료가 있는 과목만 사료 탭
+  $('subjTitle').textContent = MANAGE ? '관리 · 검수와 추가' : sj === '*' ? '암기장' : sj;
+  $('countInfo').textContent = MANAGE ? `검수대기 ${pend}` : `카드 ${filterCards(sj, 'all').length} · 오늘 복습 ${filterCards(sj, 'due').length}`;
 }
 
 /* ===== 처음 화면: 과목 고르기 ===== */
@@ -79,8 +80,9 @@ function showPicker() {
   $('pickList').innerHTML = list.map(s => {
     const n = confirmed().filter(c => c.subject === s).length;
     const units = new Set(confirmed().filter(c => c.subject === s).map(c => c.unit)).size;
-    return `<button class="ptile" data-s="${esc(s)}"><span class="ic">${SUBJ_ICON[s] || '📚'}</span><b>${esc(s)}</b><small>단원 ${units} · 카드 ${n}</small></button>`;
-  }).join('') + `<button class="ptile add" data-s="*"><span class="ic">＋</span><b>새 과목 추가</b><small>사진 → AI 결과 붙여넣기</small></button>`;
+    const due = filterCards(s, 'due').length;
+    return `<button class="ptile" data-s="${esc(s)}"><span class="ic">${SUBJ_ICON[s] || '📚'}</span><b>${esc(s)}</b><small>단원 ${units} · 카드 ${n}</small>${due ? `<span class="due">오늘 복습 ${due}</span>` : '<span class="due done">복습 완료</span>'}</button>`;
+  }).join('') || '<p class="muted">아직 과목이 없어요.</p>';
   $('pickList').querySelectorAll('.ptile').forEach(b => b.onclick = () => pickSubject(b.dataset.s));
   $('picker').classList.remove('hidden');
   ['topBar'].forEach(id => $(id).classList.add('hidden'));
@@ -92,7 +94,7 @@ function pickSubject(s) {
   $('picker').classList.add('hidden'); $('topBar').classList.remove('hidden');
   document.querySelector('main').classList.remove('hidden'); document.querySelector('.tabs').classList.remove('hidden');
   bUnit = null; refreshCommon();
-  goTab(s === '*' ? 'data' : 'blank');
+  goTab('blank');
 }
 $('pickBtn').onclick = showPicker;
 function goTab(t) { document.querySelector(`.tabs button[data-tab="${t}"]`).click(); }
@@ -100,7 +102,7 @@ function goTab(t) { document.querySelector(`.tabs button[data-tab="${t}"]`).clic
 document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
   document.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('active', x === b));
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.id === 'tab-' + b.dataset.tab));
-  $('sheet').classList.toggle('show', b.dataset.tab === 'sheet' && $('sheet').innerHTML !== '');
+  $('sheet').classList.remove('show');
   if (b.dataset.tab === 'cards') startDeck();
   if (b.dataset.tab === 'blank') renderBlank();
   window.scrollTo(0, 0);
@@ -120,10 +122,10 @@ function startDeck() {
 function showCard() {
   shown = false;
   $('cA').classList.add('hidden'); $('cExp').classList.add('hidden'); $('cHint').classList.remove('hidden');
-  $('expEdit').classList.add('hidden'); $('cExpBtn').classList.toggle('hidden', di >= deck.length); $('cStar').classList.toggle('hidden', di >= deck.length);
+  $('cStar').classList.toggle('hidden', di >= deck.length);
   if (di >= deck.length) {
     $('cMeta').textContent = ''; $('cQ').textContent = deck.length ? '이번 묶음 끝! 🎉' : '볼 카드가 없어요';
-    $('cHint').textContent = deck.length ? '' : '범위를 바꾸거나 검수 탭에서 카드를 확정하세요';
+    $('cHint').textContent = deck.length ? '' : '범위를 바꿔 보세요';
     $('cProgress').textContent = ''; return;
   }
   const c = deck[di];
@@ -131,23 +133,11 @@ function showCard() {
   const rev = $('fReverse').checked;
   $('cQ').textContent = rev ? c.a : c.q; $('cA').textContent = rev ? c.q : c.a; $('cHint').textContent = '탭해서 답 보기';
   $('cExp').textContent = c.exp ? '💡 ' + c.exp : '';
-  $('cExpBtn').textContent = c.exp ? '✏️ 해설 고치기' : '✏️ 해설 쓰기';
   $('cStar').textContent = stars.includes(c.id) ? '★' : '☆';
   $('cProgress').textContent = `${di + 1} / ${deck.length}`;
 }
 $('cardBox').onclick = e => { if (e.target.id === 'cStar') return; if (di < deck.length) { shown = !shown; $('cA').classList.toggle('hidden', !shown); $('cExp').classList.toggle('hidden', !shown || !deck[di].exp); $('cHint').classList.toggle('hidden', shown); } };
 $('cStar').onclick = e => { e.stopPropagation(); const id = deck[di]?.id; if (!id) return; stars = stars.includes(id) ? stars.filter(x => x !== id) : [...stars, id]; saveAll(); $('cStar').textContent = stars.includes(id) ? '★' : '☆'; };
-// 해설 쓰기: 기기에 저장되고, 검수 탭·학습지 답지·걷기 모드에도 반영
-$('cExpBtn').onclick = () => { const c = deck[di]; if (!c) return; $('expBox').value = c.exp || ''; $('expEdit').classList.remove('hidden'); $('expBox').focus(); };
-$('expCancel').onclick = () => $('expEdit').classList.add('hidden');
-$('expSave').onclick = () => {
-  const c = deck[di]; if (!c) return;
-  const nc = { ...allCards().find(x => x.id === c.id), exp: $('expBox').value.trim() };
-  upsert(nc); deck[di] = nc; $('expEdit').classList.add('hidden');
-  $('cExp').textContent = nc.exp ? '💡 ' + nc.exp : ''; $('cExp').classList.toggle('hidden', !nc.exp);
-  $('cA').classList.remove('hidden'); $('cHint').classList.add('hidden'); shown = true;
-  $('cExpBtn').textContent = nc.exp ? '✏️ 해설 고치기' : '✏️ 해설 쓰기';
-};
 function answerCard(k) { if (di >= deck.length) return; grade(deck[di].id, k); di++; showCard(); refreshCommon(); }
 $('bRight').onclick = () => answerCard(true);
 $('bWrong').onclick = () => answerCard(false);
@@ -185,14 +175,14 @@ function renderBlank() {
   const units = [...new Set(all.map(c => c.unit || '기타'))];
   if (!units.includes(bUnit)) bUnit = units[0] || null;
   const wrongN = u => all.filter(c => (c.unit || '기타') === u && (bWrong[c.id] || []).length).length;
-  $('bUnits').innerHTML = units.map(u => `<button class="chip ${u === bUnit ? 'on' : ''}" data-u="${esc(u)}">${esc(u)}${wrongN(u) ? ` <span style="color:#f87171">●${wrongN(u)}</span>` : ''}</button>`).join('');
+  $('bUnits').innerHTML = units.map(u => `<button class="chip ${u === bUnit ? 'on' : ''}" data-u="${esc(u)}">${esc(u)}${wrongN(u) ? ` <span class="wdot">●${wrongN(u)}</span>` : ''}</button>`).join('');
   $('bUnits').querySelectorAll('.chip').forEach(b => b.onclick = () => { bUnit = b.dataset.u; bState = {}; renderBlank(); window.scrollTo(0, 0); });
   const onChip = $('bUnits').querySelector('.on'); if (onChip) $('bUnits').scrollLeft = onChip.offsetLeft - 20;
   let list = all.filter(c => (c.unit || '기타') === bUnit);
   if ($('bWrongOnly').checked) list = list.filter(c => (bWrong[c.id] || []).length);
   const type = $('bMode').value === 'type', hint = $('bHint').checked;
   if (!list.length) {
-    $('blankBox').innerHTML = `<p class="muted center" style="padding:30px 0">${all.length ? ($('bWrongOnly').checked ? '이 단원에 틀린 빈칸이 없어요 🎉' : '빈칸 문장이 없어요') : '이 과목에는 아직 빈칸 문장이 없어요. 추가 탭에서 사진 → AI 결과를 붙여넣으세요.'}</p>`;
+    $('blankBox').innerHTML = `<p class="muted center" style="padding:30px 0">${all.length ? ($('bWrongOnly').checked ? '이 단원에 틀린 빈칸이 없어요 🎉' : '빈칸 문장이 없어요') : '이 과목에는 아직 빈칸 문장이 없어요.'}</p>`;
     $('bBar').innerHTML = ''; $('bTip').textContent = ''; return;
   }
   let html = '', topic = null, n = 0;
@@ -218,7 +208,7 @@ function renderBlank() {
 function updateBlankBar(n, type) {
   const vals = Object.values(bState);
   const seen = vals.length, no = vals.filter(v => v === 'no').length;
-  $('bBar').innerHTML = `<span class="stat">빈칸 <b>${n}</b> · 확인 <b>${seen}</b> · 몰랐음 <b style="color:#f87171">${no}</b></span>` +
+  $('bBar').innerHTML = `<span class="stat">빈칸 <b>${n}</b> · 확인 <b>${seen}</b> · 몰랐음 <b class="wdot">${no}</b></span>` +
     (type ? `<button class="btn small good" id="bCheck">채점</button>` : `<button class="btn small" id="bShowAll">모두 보기</button>`) +
     `<button class="btn small" id="bHideAll">다시 가리기</button>`;
   if ($('bCheck')) $('bCheck').onclick = checkTyped;
@@ -300,7 +290,7 @@ async function walkLoop() {
 }
 $('wStart').onclick = async () => {
   wDeck = shuffle(filterCards($('wSubject').value, $('wScope').value));
-  if (!wDeck.length) { alert('볼 카드가 없어요. 범위를 바꾸거나 검수 탭에서 확정하세요.'); return; }
+  if (!wDeck.length) { alert('볼 카드가 없어요. 범위를 바꿔 보세요.'); return; }
   wi = 0; walking = true; $('walkScreen').classList.remove('hidden');
   try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch { }
   speak(' '); // iOS: 첫 탭에서 음성 잠금 해제
@@ -398,7 +388,7 @@ $('pasteAdd').onclick = () => {
     delSums = delSums.filter(d => d !== s.id); localSums[s.id] = s; m++;
   });
   saveAll();
-  $('pasteMsg').textContent = `✅ 요약본 ${m}개 · 카드 ${n}개 추가됨 → 요약은 '요약' 탭, 카드는 '검수' 탭에서 확인 후 확정하세요.`;
+  $('pasteMsg').textContent = `✅ 요약본 ${m}개 · 카드 ${n}개 추가됨 → 카드는 '검수' 탭에서 확인 후 확정하세요.`;
   $('pasteBox').value = ''; refreshCommon();
 };
 
@@ -455,65 +445,6 @@ $('importFile').onchange = async e => {
   e.target.value = '';
 };
 
-/* ===== 학습지 ===== */
-function fillUnits() {
-  const sel = $('sUnit'), cur = sel.value, s = $('sSubject').value;
-  const units = [...new Set(confirmed().filter(c => s === '*' || c.subject === s).map(c => c.unit).filter(Boolean))];
-  sel.innerHTML = '<option value="*">전체 단원</option>' + units.map(u => `<option>${esc(u)}</option>`).join('');
-  if ([...sel.options].some(o => o.value === cur)) sel.value = cur;
-}
-$('sSubject').onchange = fillUnits;
-
-function sheetCards() {
-  const s = $('sSubject').value, u = $('sUnit').value, r = $('sRange').value;
-  let list = confirmed();
-  if (s !== '*') list = list.filter(c => c.subject === s);
-  if (u !== '*') list = list.filter(c => c.unit === u);
-  if (r === 'today') list = list.filter(c => c.lessonDate === today());
-  if (r === 'week') { const lim = Date.now() - 7 * DAY; list = list.filter(c => c.lessonDate && new Date(c.lessonDate).getTime() >= lim); }
-  if (r === 'wrong') list = list.filter(c => prog[c.id] && prog[c.id].wrong > 0);
-  return list.sort(byOrder);
-}
-function blankHtml(c) {
-  const seg = segments(c), answers = [];
-  if (!c.sentence || !seg.some(x => x.b)) return { html: `${esc(c.q)} <span class="blank">&nbsp;</span>`, answers: [c.a] };
-  const html = seg.map(x => x.t !== undefined ? esc(x.t) : `<span class="blank" style="min-width:${Math.min(70, Math.max(14, x.b.length * 3.4))}mm">${'①②③④⑤⑥⑦⑧⑨⑩'[answers.push(x.b) - 1] || ''}</span>`).join('');
-  return { html, answers };
-}
-function lines(n) { return '<div class="line"></div>'.repeat(n); }
-
-$('sMake').onclick = () => {
-  const list = sheetCards(), type = $('sType').value, nl = parseInt($('sLines').value);
-  if (!list.length) { alert('조건에 맞는 확정 카드가 없어요.'); return; }
-  const title = { blank: '빈칸 채우기', bbak: '빡지', qa: '문답 점검' }[type];
-  const subj = $('sSubject').value === '*' ? '전체 과목' : $('sSubject').value;
-  const unit = $('sUnit').value === '*' ? '' : ' · ' + $('sUnit').value;
-  const head = t => `<div class="ph"><h3>${esc(t)}</h3><div class="info">${esc(subj + unit)} · ${list.length}문항 · 날짜 ____ 점수 ____</div></div>`;
-  let body = '', ans = [], lastU = null, lastT = null;
-  list.forEach((c, i) => {
-    const n = i + 1;
-    if (type === 'blank' && $('sUnit').value === '*' && c.unit !== lastU) { lastU = c.unit; lastT = null; body += `<div class="sunit">${esc(c.unit || '')}</div>`; }
-    if (type === 'blank' && c.topic && c.topic !== lastT) { lastT = c.topic; body += `<div class="stopic">${esc(c.topic)}</div>`; }
-    if (type === 'blank') {
-      const b = blankHtml(c);
-      body += `<div class="item"><span class="n">${n}.</span>${b.html}</div>`;
-      ans.push(`${n}. ${b.answers.map((a, j) => (b.answers.length > 1 ? '①②③④⑤⑥⑦⑧⑨⑩'[j] + ' ' : '') + esc(a)).join('  ')}`);
-    } else if (type === 'bbak') {
-      body += `<div class="item bbak"><div class="k"><b>${n}.</b> ${esc(c.q)}<br><b>→ ${esc(c.a)}</b></div><div class="w">${lines(nl)}</div></div>`;
-      ans.push(`${n}. ${esc(c.a)}`);
-    } else {
-      body += `<div class="item"><span class="n">${n}.</span>${esc(c.q)}${lines(Math.max(1, nl - 1))}</div>`;
-      ans.push(`${n}. ${esc(c.a)}`);
-    }
-  });
-  let html = `<div class="page">${head(title)}${body}</div>`;
-  const withExp = $('sExp').checked;
-  if ($('sAnswer').checked && (type !== 'bbak' || withExp)) html += `<div class="page">${head(title + ' — 답지')}${ans.map((a, i) => `<div class="item">${a}${withExp && list[i].exp ? `<div class="ex">💡 ${esc(list[i].exp)}</div>` : ''}</div>`).join('')}</div>`;
-  $('sheet').innerHTML = html; $('sheet').classList.add('show');
-  $('sheet').scrollIntoView({ behavior: 'smooth' });
-};
-$('sPrint').onclick = () => { if (!$('sheet').innerHTML) $('sMake').onclick(); if ($('sheet').innerHTML) window.print(); };
-
 /* ===== 요약본 ===== */
 function mdLite(t) {
   const out = []; let ul = false;
@@ -541,7 +472,7 @@ function renderSums() {
         <textarea data-k="body" rows="12">${esc(x.body || '')}</textarea>
         <div class="row"><button class="btn small good" data-act="save">저장</button></div>
       </div>
-    </details>`).join('') : '<p class="muted">아직 요약본이 없어요. 추가·백업 탭에서 AI 결과를 붙여넣거나 "+ 요약 직접 쓰기"를 누르세요.</p>';
+    </details>`).join('') : '<p class="muted">아직 요약본이 없어요. "+ 요약 직접 쓰기"를 누르세요.</p>';
 }
 $('mSubject').onchange = renderSums;
 $('sumList').onclick = e => {
@@ -615,7 +546,8 @@ async function init() {
   try { const r = await fetch('data/summaries.json', { cache: 'no-cache' }); baseSums = await r.json(); } catch { baseSums = []; }
   try { const r = await fetch('data/sources.json', { cache: 'no-cache' }); baseSrcs = await r.json(); } catch { baseSrcs = []; }
   refreshCommon(); startDeck();
-  if (!curSubject || (curSubject !== '*' && !subjects().includes(curSubject))) showPicker();
+  if (MANAGE) { document.body.classList.add('manage'); goTab('review'); return; }
+  if (!curSubject || !subjects().includes(curSubject)) showPicker();
   else renderBlank();
 }
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => { });
