@@ -69,6 +69,7 @@ function refreshCommon() {
   const pend = allCards().filter(c => c.status !== '확정').length;
   $('pendingBadge').textContent = pend || '';
   const sj = curSubject && curSubject !== '*' ? curSubject : '*';
+  $('srcTab').classList.toggle('hidden', MANAGE || !baseSrcs.some(s => sj === '*' || s.subject === sj)); // 사료가 있는 과목만 사료 탭
   $('subjTitle').textContent = MANAGE ? '관리 · 검수와 추가' : sj === '*' ? '암기장' : sj;
   $('countInfo').textContent = MANAGE ? `검수대기 ${pend}` : `카드 ${filterCards(sj, 'all').length} · 오늘 복습 ${filterCards(sj, 'due').length}`;
 }
@@ -107,6 +108,7 @@ document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
   window.scrollTo(0, 0);
   if (b.dataset.tab === 'review') renderReview();
   if (b.dataset.tab === 'sum') renderSums();
+  if (b.dataset.tab === 'src') { srcOrder = null; renderSrc(); }
   refreshCommon();
 });
 
@@ -500,10 +502,49 @@ $('mPrint').onclick = () => {
   $('sheet').classList.add('show'); setTimeout(() => window.print(), 100);
 };
 
+/* ===== 사료 ===== */
+// data/sources.json: {id, subject, unit, title, text, cite, a, exp}. 맞히기 모드에서는 제목·정답을 가리고 사료만 보여 줌.
+let baseSrcs = [], srcWrong = LS.get('ma_srcwrong', []), srcUnit = '*', srcOpen = {}, srcOrder = null;
+function renderSrc() {
+  const sj = curSubject && curSubject !== '*' ? curSubject : null;
+  const all = baseSrcs.filter(s => !sj || s.subject === sj).sort(byOrder);
+  const units = [...new Set(all.map(s => s.unit || '기타'))];
+  if (srcUnit !== '*' && !units.includes(srcUnit)) srcUnit = '*';
+  $('srcUnits').innerHTML = [['*', '전체']].concat(units.map(u => [u, u])).map(([v, l]) => `<button class="chip ${v === srcUnit ? 'on' : ''}" data-u="${esc(v)}">${esc(l)}</button>`).join('');
+  $('srcUnits').querySelectorAll('.chip').forEach(b => b.onclick = () => { srcUnit = b.dataset.u; srcOpen = {}; srcOrder = null; renderSrc(); });
+  let list = all.filter(s => srcUnit === '*' || (s.unit || '기타') === srcUnit);
+  if ($('srcWrongOnly').checked) list = list.filter(s => srcWrong.includes(s.id));
+  const quiz = $('srcMode').value === 'quiz';
+  if (quiz && $('srcShuffle').checked) {
+    if (!srcOrder) srcOrder = shuffle(list.map(s => s.id));
+    list = list.slice().sort((x, y) => srcOrder.indexOf(x.id) - srcOrder.indexOf(y.id));
+  }
+  $('srcList').innerHTML = list.length ? list.map((s, i) => {
+    const open = !quiz || srcOpen[s.id], st = srcOpen[s.id];
+    return `<div class="src ${srcWrong.includes(s.id) ? 'hasWrong' : ''}" data-id="${esc(s.id)}">
+      <div class="srch">${quiz && !open ? `사료 ${i + 1}` : `${esc(s.title || '사료')}<small>${esc(s.unit || '')}</small>`}</div>
+      <div class="srct">${esc(s.text)}</div>
+      ${s.cite && !(quiz && !open && /기출/.test(s.title || '')) ? `<div class="srcc">- ${esc(s.cite)} -</div>` : ''}
+      ${open ? `<div class="srca">→ ${esc(s.a)}</div>${s.exp ? `<div class="srce">💡 ${esc(s.exp)}</div>` : ''}` : `<button class="btn small" data-act="show">무엇에 대한 사료일까? (탭해서 정답 보기)</button>`}
+      ${quiz && open ? `<div class="row"><button class="btn small bad ${st === 'no' ? 'on' : ''}" data-act="no">몰랐다</button><button class="btn small good ${st === 'ok' ? 'on' : ''}" data-act="ok">알았다</button></div>` : ''}
+    </div>`;
+  }).join('') : `<p class="muted center" style="padding:30px 0">${all.length ? '여기에 해당하는 사료가 없어요 🎉' : '이 과목에는 아직 사료가 없어요.'}</p>`;
+  $('srcTip').textContent = quiz ? '사료를 읽고 무엇에 대한 것인지 떠올린 뒤 탭해서 확인하세요. \'몰랐다\'를 누른 사료는 \'틀린 것만\'에 모여요.' : '사료와 정답·해설을 함께 보는 모드예요.';
+}
+$('srcList').onclick = e => {
+  const act = e.target.dataset.act; if (!act) return;
+  const id = e.target.closest('.src').dataset.id;
+  if (act === 'show') srcOpen[id] = 'shown';
+  else { srcOpen[id] = act; srcWrong = act === 'no' ? [...new Set([...srcWrong, id])] : srcWrong.filter(x => x !== id); LS.set('ma_srcwrong', srcWrong); }
+  renderSrc();
+};
+['srcMode', 'srcShuffle', 'srcWrongOnly'].forEach(id => $(id).onchange = () => { srcOpen = {}; srcOrder = null; renderSrc(); });
+
 /* ===== 시작 ===== */
 async function init() {
   try { const r = await fetch('data/cards.json', { cache: 'no-cache' }); baseCards = await r.json(); } catch { baseCards = []; }
   try { const r = await fetch('data/summaries.json', { cache: 'no-cache' }); baseSums = await r.json(); } catch { baseSums = []; }
+  try { const r = await fetch('data/sources.json', { cache: 'no-cache' }); baseSrcs = await r.json(); } catch { baseSrcs = []; }
   refreshCommon(); startDeck();
   if (MANAGE) { document.body.classList.add('manage'); goTab('review'); return; }
   if (!curSubject || !subjects().includes(curSubject)) showPicker();
