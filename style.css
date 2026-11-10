@@ -125,3 +125,15 @@ button.vlink{background:none;border:0;cursor:pointer;padding:0}
 html,body,button,a,.bk,.chip,.card,.ptile{touch-action:manipulation}
 /* 아이폰: 16px보다 작은 입력칸은 누를 때 자동 확대되므로 16px 이상으로 */
 select,textarea,input,#expEdit textarea,.scard textarea{font-size:16px!important}
+/* 사료 */
+.src{background:#1e293b;border-radius:12px;padding:12px 14px;margin:10px 0}
+.src.hasWrong{box-shadow:inset 3px 0 0 #f87171}
+.srch{font-weight:700;color:#facc15;font-size:15px;margin-bottom:8px}
+.srch small{display:block;font-weight:400;color:#94a3b8;font-size:12px}
+.srct{font-size:16px;line-height:1.8;white-space:pre-wrap;word-break:keep-all;border-left:3px solid #475569;padding-left:10px}
+.srcc{text-align:right;color:#94a3b8;font-size:13px;margin:6px 0}
+.srca{font-size:17px;font-weight:700;color:#86efac;margin-top:10px}
+.srce{font-size:14px;line-height:1.6;color:#cbd5e1;margin-top:6px}
+.src .btn.small{margin-top:10px}
+.src .btn.on{outline:2px solid #facc15}
+.tabs button{font-size:12px}
