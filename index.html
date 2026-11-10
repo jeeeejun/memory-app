@@ -95,6 +95,21 @@
     <div id="sumList"></div>
   </section>
 
+  <!-- 사료 -->
+  <section id="tab-src" class="tab">
+    <div class="chips" id="srcUnits"></div>
+    <div class="filters">
+      <select id="srcMode">
+        <option value="quiz">사료 보고 맞히기</option>
+        <option value="view">사료 보기 (정답 보임)</option>
+      </select>
+      <label class="chk"><input type="checkbox" id="srcShuffle"> 섞기</label>
+      <label class="chk"><input type="checkbox" id="srcWrongOnly"> 틀린 것만</label>
+    </div>
+    <div id="srcList"></div>
+    <p class="muted" id="srcTip"></p>
+  </section>
+
   <!-- 걷기 -->
   <section id="tab-walk" class="tab">
     <div class="filters">
@@ -192,6 +207,7 @@
 <nav class="tabs no-print">
   <button data-tab="blank" class="active">빈칸</button>
   <button data-tab="cards">카드</button>
+  <button data-tab="src">사료</button>
   <button data-tab="walk">걷기</button>
   <button data-tab="sheet">학습지</button>
   <button data-tab="sum">요약</button>
