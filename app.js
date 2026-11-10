@@ -64,8 +64,25 @@ function fillSubjectSelect(sel) {
   sel.innerHTML = '<option value="*">전체 과목</option>' + subjects().map(s => `<option>${esc(s)}</option>`).join('');
   if ([...sel.options].some(o => o.value === cur)) sel.value = cur;
 }
+// 파트(큰 단원)·단원별로 나눠 보기. 값: '*' | 'P:03' (03-1~03-5 묶음) | 'U:03-1 4·19 혁명'
+function unitPart(u) { const code = String(u || '기타').split(' ')[0]; const i = code.lastIndexOf('-'); return i > 0 ? code.slice(0, i) : code; }
+function inPart(c, v) { return !v || v === '*' || (v.startsWith('P:') ? unitPart(c.unit) === v.slice(2) : (c.unit || '기타') === v.slice(2)); }
+function fillPartSelect(sel, subjSel) {
+  const s = $(subjSel).value, list = confirmed().filter(c => s === '*' || c.subject === s);
+  const units = [...new Set(list.slice().sort(byOrder).map(c => c.unit || '기타'))];
+  const parts = [...new Set(units.map(unitPart))];
+  const n = f => list.filter(f).length;
+  const cur = sel.value || LS.get('ma_' + sel.id, '*');
+  sel.innerHTML = `<option value="*">전체 단원 (${list.length})</option>` + parts.map(p => {
+    const us = units.filter(u => unitPart(u) === p);
+    return `<optgroup label="${esc(p)} 단원">` + (us.length > 1 ? `<option value="P:${esc(p)}">${esc(p)} 단원 전체 (${n(c => unitPart(c.unit) === p)})</option>` : '') +
+      us.map(u => `<option value="U:${esc(u)}">${esc(u)} (${n(c => (c.unit || '기타') === u)})</option>`).join('') + '</optgroup>';
+  }).join('');
+  sel.value = [...sel.options].some(o => o.value === cur) ? cur : '*';
+}
 function refreshCommon() {
   ['fSubject', 'wSubject', 'mSubject'].forEach(id => fillSubjectSelect($(id)));
+  fillPartSelect($('fPart'), 'fSubject'); fillPartSelect($('wPart'), 'wSubject');
   const pend = allCards().filter(c => c.status !== '확정').length;
   $('pendingBadge').textContent = pend || '';
   const sj = curSubject && curSubject !== '*' ? curSubject : '*';
@@ -121,7 +138,7 @@ function refHtml(c) { return (c.ref || []).map(([o, t]) => `<div class="rl"><div
 /* ===== 카드 모드 ===== */
 let deck = [], di = 0, shown = false;
 function startDeck() {
-  deck = filterCards($('fSubject').value, $('fScope').value);
+  deck = filterCards($('fSubject').value, $('fScope').value).filter(c => inPart(c, $('fPart').value)).sort(byOrder);
   if ($('fShuffle').checked) deck = shuffle(deck);
   di = 0; showCard();
 }
@@ -150,6 +167,10 @@ $('bRight').onclick = () => answerCard(true);
 $('bWrong').onclick = () => answerCard(false);
 $('bMid').onclick = () => answerCard('mid');
 ['fSubject', 'fScope', 'fShuffle', 'fReverse'].forEach(id => $(id).onchange = startDeck);
+$('fSubject').addEventListener('change', () => { fillPartSelect($('fPart'), 'fSubject'); startDeck(); });
+$('fPart').onchange = () => { LS.set('ma_fPart', $('fPart').value); startDeck(); };
+$('wSubject').addEventListener('change', () => fillPartSelect($('wPart'), 'wSubject'));
+$('wPart').onchange = () => LS.set('ma_wPart', $('wPart').value);
 
 /* ===== 빈칸 추론 ===== */
 // 문장을 [글자, 빈칸, 글자 ...] 조각으로 나눔. 빈칸끼리 겹치면 긴 것을 우선.
@@ -298,7 +319,7 @@ async function walkLoop() {
   if (walking) { $('wQ').textContent = '끝! 수고했어요 🎉'; $('wA').textContent = ''; $('wStatus').textContent = ''; await speak('끝났어요. 수고했어요.'); }
 }
 $('wStart').onclick = async () => {
-  wDeck = shuffle(filterCards($('wSubject').value, $('wScope').value));
+  wDeck = shuffle(filterCards($('wSubject').value, $('wScope').value).filter(c => inPart(c, $('wPart').value)));
   if (!wDeck.length) { alert('볼 카드가 없어요. 범위를 바꿔 보세요.'); return; }
   wi = 0; walking = true; $('walkScreen').classList.remove('hidden');
   try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch { }
