@@ -1,6 +1,6 @@
 // 오프라인 실행용. 앱 파일을 고치면 VERSION 숫자를 올리세요.
-const VERSION = 'v10';
-const SHELL = ['./', './index.html', './style.css', './app.js', './manifest.json', './icon.svg', './data/cards.json', './data/summaries.json', './vocab.html', './english.html'];
+const VERSION = 'v11';
+const SHELL = ['./', './index.html', './style.css', './app.js', './manifest.json', './icon.svg', './data/cards.json', './data/summaries.json', './vocab.html', './english.html', './manage.html'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL))); self.skipWaiting(); });
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== VERSION).map(k => caches.delete(k)))));
