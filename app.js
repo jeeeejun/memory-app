@@ -69,6 +69,7 @@ function refreshCommon() {
   const pend = allCards().filter(c => c.status !== '확정').length;
   $('pendingBadge').textContent = pend || '';
   const sj = curSubject && curSubject !== '*' ? curSubject : '*';
+  $('txtTab').classList.toggle('hidden', MANAGE || !baseTxts.some(t => sj === '*' || t.subject === sj)); // 원문이 있는 과목만 원문 탭
   $('srcTab').classList.toggle('hidden', MANAGE || !baseSrcs.some(s => sj === '*' || s.subject === sj)); // 사료가 있는 과목만 사료 탭
   $('subjTitle').textContent = MANAGE ? '관리 · 검수와 추가' : sj === '*' ? '암기장' : sj;
   $('countInfo').textContent = MANAGE ? `검수대기 ${pend}` : `카드 ${filterCards(sj, 'all').length} · 오늘 복습 ${filterCards(sj, 'due').length}`;
@@ -109,8 +110,13 @@ document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
   if (b.dataset.tab === 'review') renderReview();
   if (b.dataset.tab === 'sum') renderSums();
   if (b.dataset.tab === 'src') { srcOrder = null; renderSrc(); }
+  if (b.dataset.tab === 'txt') renderTxt();
+  if (b.dataset.tab === 'walk') $('wShowA').checked = LS.get('ma_wshowa', null) ?? curSubject === '국어'; // 국어는 기본으로 답을 같이 보여 줌
   refreshCommon();
 });
+
+// 카드에 붙은 작품 구절 [[원문, 해석], ...] (국어)
+function refHtml(c) { return (c.ref || []).map(([o, t]) => `<div class="rl"><div class="ro">${esc(o)}</div>${t ? `<div class="rt">${esc(t)}</div>` : ''}</div>`).join(''); }
 
 /* ===== 카드 모드 ===== */
 let deck = [], di = 0, shown = false;
@@ -121,7 +127,7 @@ function startDeck() {
 }
 function showCard() {
   shown = false;
-  $('cA').classList.add('hidden'); $('cExp').classList.add('hidden'); $('cHint').classList.remove('hidden');
+  $('cA').classList.add('hidden'); $('cExp').classList.add('hidden'); $('cRef').classList.add('hidden'); $('cRef').innerHTML = ''; $('cHint').classList.remove('hidden');
   $('cStar').classList.toggle('hidden', di >= deck.length);
   if (di >= deck.length) {
     $('cMeta').textContent = ''; $('cQ').textContent = deck.length ? '이번 묶음 끝! 🎉' : '볼 카드가 없어요';
@@ -133,10 +139,11 @@ function showCard() {
   const rev = $('fReverse').checked;
   $('cQ').textContent = rev ? c.a : c.q; $('cA').textContent = rev ? c.q : c.a; $('cHint').textContent = '탭해서 답 보기';
   $('cExp').textContent = c.exp ? '💡 ' + c.exp : '';
+  $('cRef').innerHTML = refHtml(c);
   $('cStar').textContent = stars.includes(c.id) ? '★' : '☆';
   $('cProgress').textContent = `${di + 1} / ${deck.length}`;
 }
-$('cardBox').onclick = e => { if (e.target.id === 'cStar') return; if (di < deck.length) { shown = !shown; $('cA').classList.toggle('hidden', !shown); $('cExp').classList.toggle('hidden', !shown || !deck[di].exp); $('cHint').classList.toggle('hidden', shown); } };
+$('cardBox').onclick = e => { if (e.target.id === 'cStar') return; if (di < deck.length) { shown = !shown; $('cA').classList.toggle('hidden', !shown); $('cExp').classList.toggle('hidden', !shown || !deck[di].exp); $('cRef').classList.toggle('hidden', !shown || !(deck[di].ref || []).length); $('cHint').classList.toggle('hidden', shown); } };
 $('cStar').onclick = e => { e.stopPropagation(); const id = deck[di]?.id; if (!id) return; stars = stars.includes(id) ? stars.filter(x => x !== id) : [...stars, id]; saveAll(); $('cStar').textContent = stars.includes(id) ? '★' : '☆'; };
 function answerCard(k) { if (di >= deck.length) return; grade(deck[di].id, k); di++; showCard(); refreshCommon(); }
 $('bRight').onclick = () => answerCard(true);
@@ -274,12 +281,14 @@ async function walkLoop() {
   while (walking && wi < wDeck.length) {
     const c = wDeck[wi];
     $('wMeta').textContent = `${wi + 1}/${wDeck.length} · ${[c.subject, c.unit].filter(Boolean).join(' · ')}`;
-    $('wQ').textContent = c.q; $('wA').textContent = ''; $('wExp').textContent = ''; $('wStatus').textContent = '문제';
+    const showA = $('wShowA').checked; // 답 같이 보기: 문제와 함께 답·해설·원문을 처음부터 보여 줌
+    const reveal = () => { $('wA').textContent = c.a; $('wExp').textContent = c.exp ? '💡 ' + c.exp : ''; $('wRef').innerHTML = refHtml(c); };
+    $('wQ').textContent = c.q; $('wA').textContent = ''; $('wExp').textContent = ''; $('wRef').innerHTML = ''; $('wStatus').textContent = showA ? '문제와 답' : '문제';
+    if (showA) reveal();
     const myIdx = wi;
     let act = await Promise.race([speak(c.q).then(() => (walking && wi === myIdx && wResolve) ? waitInput(pause) : new Promise(() => { })), new Promise(r => { wResolve = r; })]);
     if (!walking) return;
-    $('wA').textContent = c.a; $('wStatus').textContent = '정답 — 탭: 알았다 / ← 밀기: 몰랐다';
-    $('wExp').textContent = c.exp ? '💡 ' + c.exp : '';
+    reveal(); $('wStatus').textContent = '정답 — 탭: 알았다 / ← 밀기: 몰랐다';
     if (act === 'timeout') { await speak('정답. ' + c.a); if (!walking) return; if ($('wReadExp').checked && c.exp) { await speak('해설. ' + c.exp); if (!walking) return; } act = await waitInput(5000); }
     if (!walking) return;
     if (act === 'know') grade(c.id, true);
@@ -301,6 +310,7 @@ function stopWalk() {
   if (wakeLock) { wakeLock.release().catch(() => { }); wakeLock = null; }
   $('walkScreen').classList.add('hidden'); refreshCommon();
 }
+$('wShowA').onchange = () => LS.set('ma_wshowa', $('wShowA').checked);
 $('wStop').onclick = e => { e.stopPropagation(); stopWalk(); };
 let tx = 0, ty = 0;
 $('walkScreen').addEventListener('touchstart', e => { tx = e.touches[0].clientX; ty = e.touches[0].clientY; }, { passive: true });
@@ -540,11 +550,37 @@ $('srcList').onclick = e => {
 };
 ['srcMode', 'srcShuffle', 'srcWrongOnly'].forEach(id => $(id).onchange = () => { srcOpen = {}; srcOrder = null; renderSrc(); });
 
+/* ===== 원문·해석 ===== */
+// data/texts.json: {id, subject, unit, title, author, note, source, parts: [{name, lines: [[원문, 해석, 풀이·필기]]}]}
+let baseTxts = [], txtCur = null, txtOpen = {};
+function renderTxt() {
+  const sj = curSubject && curSubject !== '*' ? curSubject : null;
+  const all = baseTxts.filter(t => !sj || t.subject === sj).sort(byOrder);
+  if (!all.some(t => t.id === txtCur)) txtCur = all[0]?.id || null;
+  $('txtWorks').innerHTML = all.map(t => `<button class="chip ${t.id === txtCur ? 'on' : ''}" data-id="${esc(t.id)}">${esc(t.title)}</button>`).join('');
+  $('txtWorks').querySelectorAll('.chip').forEach(b => b.onclick = () => { txtCur = b.dataset.id; txtOpen = {}; renderTxt(); window.scrollTo(0, 0); });
+  const onChip = $('txtWorks').querySelector('.on'); if (onChip) $('txtWorks').scrollLeft = onChip.offsetLeft - 20;
+  const t = all.find(x => x.id === txtCur);
+  if (!t) { $('txtBox').innerHTML = '<p class="muted center" style="padding:30px 0">이 과목에는 아직 원문이 없어요.</p>'; $('txtTip').textContent = ''; return; }
+  const showT = $('txtTrans').checked, showN = $('txtNote').checked;
+  const hasT = t.parts.some(p => p.lines.some(l => l[1]));
+  let n = 0;
+  $('txtBox').innerHTML = `<div class="txth"><b>${esc(t.title)}</b><small>${esc([t.author, t.source].filter(Boolean).join(' · '))}</small>${t.note ? `<small>${esc(t.note)}</small>` : ''}</div>` +
+    t.parts.map(p => (p.name ? `<div class="btopic">${esc(p.name)}</div>` : '') + '<div class="txt">' + p.lines.map(([o, tr, note]) => {
+      n++; const open = showT || txtOpen[n];
+      return `<div class="tline ${tr && !showT ? 'tap' : ''}" data-n="${n}"><span class="tn">${n}</span><div><div class="ro">${esc(o)}</div>${tr && open ? `<div class="rt">${esc(tr)}</div>` : ''}${note && showN ? `<div class="tnote">${esc(note)}</div>` : ''}</div></div>`;
+    }).join('') + '</div>').join('');
+  $('txtTip').textContent = !hasT ? '' : showT ? '\'해석 보기\'를 끄면 원문만 보고 뜻을 떠올린 뒤, 행을 눌러 해석을 확인할 수 있어요.' : '행을 누르면 그 행의 해석이 보여요.';
+}
+$('txtBox').onclick = e => { const l = e.target.closest('.tline.tap'); if (!l) return; txtOpen[l.dataset.n] = !txtOpen[l.dataset.n]; renderTxt(); };
+['txtTrans', 'txtNote'].forEach(id => $(id).onchange = () => { txtOpen = {}; renderTxt(); });
+
 /* ===== 시작 ===== */
 async function init() {
   try { const r = await fetch('data/cards.json', { cache: 'no-cache' }); baseCards = await r.json(); } catch { baseCards = []; }
   try { const r = await fetch('data/summaries.json', { cache: 'no-cache' }); baseSums = await r.json(); } catch { baseSums = []; }
   try { const r = await fetch('data/sources.json', { cache: 'no-cache' }); baseSrcs = await r.json(); } catch { baseSrcs = []; }
+  try { const r = await fetch('data/texts.json', { cache: 'no-cache' }); baseTxts = await r.json(); } catch { baseTxts = []; }
   refreshCommon(); startDeck();
   if (MANAGE) { document.body.classList.add('manage'); goTab('review'); return; }
   if (!curSubject || !subjects().includes(curSubject)) showPicker();
