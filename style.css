@@ -124,6 +124,27 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--accent);margin:0}
 .src .btn.small{margin-top:10px}
 .src .btn.on{outline:2px solid var(--accent);outline-offset:2px}
 
+/* ===== 원문·해석 ===== */
+.txth{margin:14px 0 4px}
+.txth b{display:block;font-size:20px;letter-spacing:-.02em}
+.txth small{display:block;color:var(--muted);font-size:12px;line-height:1.6}
+.txt{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:4px 14px;box-shadow:var(--shadow)}
+.tline{display:flex;gap:10px;padding:11px 0;border-bottom:1px solid var(--line)}
+.tline:last-child{border-bottom:0}
+.tline.tap{cursor:pointer}
+.tn{flex:none;width:1.6em;text-align:right;color:var(--muted);font-size:12px;line-height:1.9;font-variant-numeric:tabular-nums}
+.ro{font-size:17px;line-height:1.7;font-weight:600;word-break:keep-all}
+.rt{font-size:15px;line-height:1.6;color:var(--accent);word-break:keep-all}
+.tnote{font-size:13px;line-height:1.55;color:var(--muted);margin-top:3px;word-break:keep-all}
+/* 카드·걷기에 붙는 관련 구절 */
+.ref{display:flex;flex-direction:column;gap:8px}
+.ref:empty{display:none}
+.ref .rl{border-left:3px solid var(--line);padding-left:10px}
+.card .ref .ro{font-size:15px}.card .ref .rt{font-size:14px;color:var(--sub)}
+.walk .ref{margin-top:16px}
+.walk .ref .rl{border-color:#334155}
+.walk .ref .ro{font-size:19px;color:#e2e8f0}.walk .ref .rt{font-size:17px;color:#94a3b8}
+
 /* ===== 검수 (관리 화면) ===== */
 .rcard{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;margin:10px 0}
 .rcard label{display:block;font-size:12px;color:var(--muted);margin-top:8px}
