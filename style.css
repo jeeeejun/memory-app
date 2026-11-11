@@ -201,3 +201,7 @@ select,textarea,input,.scard textarea{font-size:16px!important}
 .lv.on small{opacity:.85}
 .bopen{font-weight:600;text-decoration:underline dotted;text-underline-offset:3px;opacity:.85}
 .lvnote{margin:6px 0 0}
+/* 걷기: 이야기 모드 */
+.walk .wq mark{background:none;color:#facc15;font-weight:800}
+.walk .wq .wgap{display:inline-block;min-width:2.4em;text-align:center;border-bottom:3px solid #facc15;color:#facc15}
+.walk .wq{font-size:28px}
