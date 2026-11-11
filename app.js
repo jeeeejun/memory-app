@@ -314,53 +314,132 @@ function setLevel(l) { bLevel = l; LS.set('ma_blevel', l); bState = {}; renderBl
 document.querySelectorAll('#bLevels .lv').forEach(b => b.onclick = () => setLevel(+b.dataset.lv));
 
 /* ===== 걷기 모드 ===== */
-let walking = false, wDeck = [], wi = 0, wResolve = null, wakeLock = null, koVoice = null;
+// 두 가지 방식: 'story' = 단원·소제목 순서대로 문장을 이야기하듯 읽어 줌 / 'quiz' = 문제 → 잠깐 쉬고 → 정답
+let walking = false, wDeck = [], wi = 0, wAct = null, wWake = null, wakeLock = null, koVoice = null;
 function pickVoice() { const v = speechSynthesis.getVoices(); koVoice = v.find(x => x.lang === 'ko-KR') || v.find(x => x.lang && x.lang.startsWith('ko')) || null; }
 if ('speechSynthesis' in window) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
-function speak(text) {
+
+// 읽기 좋게 고치기: 기호·번호·날짜 표기를 말로 바꿈
+const DIGIT = '영일이삼사오육칠팔구';
+function sayable(t) {
+  return String(t || '')
+    .replace(/12·12/g, '십이 십이')
+    .replace(/(\d{1,2})·(\d{1,2})/g, (m, x, y) => [...(x + y)].map(d => DIGIT[d]).join(''))        // 4·19 → 사일구
+    .replace(/(\d{4})\.\s*(\d{1,2})\.(?:\s*(\d{1,2})\.)?/g, (m, y, mo, d) => `${y}년 ${mo}월${d ? ` ${d}일` : ''}`) // 1943. 12. → 1943년 12월
+    .replace(/(^|[^\d])(\d{1,2})\.\s*(\d{1,2})\./g, (m, p, mo, d) => `${p}${mo}월 ${d}일`)          // 4. 11. → 4월 11일
+    .replace(/(\d)\s*~\s*(\d)/g, '$1에서 $2').replace(/~/g, ' ')
+    .replace(/[①-⑳]/g, ', ').replace(/[『』「」“”"‘’']/g, '')
+    .replace(/\s*[⇒→]\s*/g, ', 그래서 ').replace(/\s*↔\s*/g, ', 하지만 ')
+    .replace(/·/g, ', ').replace(/\s*[:：]\s*/g, ', ').replace(/\s+[—–-]\s+/g, ', ').replace(/\s*—\s*/g, ', ')
+    .replace(/\s*\(([^()]*)\)(?=[가-힣])/g, ', $1').replace(/\(\s*/g, ', ').replace(/\s*\)/g, ', ').replace(/[★●•]/g, ' ')
+    .replace(/\s+,/g, ',').replace(/,(\s*,)+/g, ',').replace(/,(?=\S)/g, ', ').replace(/,\s*([.?!])/g, '$1').replace(/^\s*,\s*|\s*,\s*$/g, '').replace(/\s+/g, ' ').trim();
+}
+// 한 번에 너무 길면 끊겨서 문장·쉼표 단위로 나눠 읽음. onend가 안 오는 기기(iOS)도 있어 시간이 지나면 넘어감.
+function speakOne(text) {
   return new Promise(res => {
-    if (!('speechSynthesis' in window)) return res();
+    if (!('speechSynthesis' in window) || !text.trim()) return res();
+    let done = false; const fin = () => { if (!done) { done = true; clearTimeout(tm); res(); } };
     const u = new SpeechSynthesisUtterance(text);
     u.lang = 'ko-KR'; if (koVoice) u.voice = koVoice; u.rate = parseFloat($('wRate').value);
-    u.onend = u.onerror = () => res();
+    u.onend = u.onerror = fin;
+    const tm = setTimeout(fin, 2500 + text.length * 260 / u.rate);
     speechSynthesis.speak(u);
   });
 }
-// 사용자 입력 또는 시간 초과를 기다림: 'know' | 'wrong' | 'timeout' | 'stop'
-function waitInput(ms) { return new Promise(res => { wResolve = res; setTimeout(() => { if (wResolve === res) { wResolve = null; res('timeout'); } }, ms); }); }
-function userAct(a) { if (wResolve) { const r = wResolve; wResolve = null; speechSynthesis.cancel(); r(a); } }
+async function say(text) {
+  const parts = sayable(text).split(/(?<=[.?!])\s+/).flatMap(p => p.length <= 120 ? [p] : p.split(/(?<=,)\s+/));
+  for (const p of parts) { if (!walking || wAct) return; await speakOne(p); }
+}
+// 기다리기: 시간이 지나거나 사용자가 탭·밀기를 하면 끝남
+function wait(ms) { return new Promise(res => { const t = setTimeout(() => { wWake = null; res(); }, ms); wWake = () => { clearTimeout(t); wWake = null; res(); }; }); }
+function userAct(a) { wAct = a; if ('speechSynthesis' in window) speechSynthesis.cancel(); if (wWake) wWake(); }
+const takeAct = () => { const x = wAct; wAct = null; return x; };
+const wMode = () => $('wMode').value;
+function wShow(meta, q, a, exp, refC, status) {
+  $('wMeta').textContent = meta; $('wQ').innerHTML = q; $('wA').textContent = a || ''; $('wExp').textContent = exp ? '💡 ' + exp : '';
+  $('wRef').innerHTML = refC ? refHtml(refC) : ''; $('wStatus').textContent = status || '';
+}
+const unitTitle = u => String(u || '').replace(/^[\d-]+\s*/, '');
 
-async function walkLoop() {
-  const pause = parseInt($('wPause').value) * 1000;
+async function storyLoop() {
+  const stopAtCore = $('wCoreStop').checked, pause = parseInt($('wPause').value) * 1000;
+  const STATUS = '탭: 잠깐 멈춤 · ← 밀기: 다시 듣기 · → 밀기: 다음';
+  let lastU = wi > 0 ? wDeck[wi - 1].unit : null, lastT = wi > 0 ? wDeck[wi - 1].topic : null;
   while (walking && wi < wDeck.length) {
-    const c = wDeck[wi];
-    $('wMeta').textContent = `${wi + 1}/${wDeck.length} · ${[c.subject, c.unit].filter(Boolean).join(' · ')}`;
-    const showA = $('wShowA').checked; // 답 같이 보기: 문제와 함께 답·해설·원문을 처음부터 보여 줌
-    const reveal = () => { $('wA').textContent = c.a; $('wExp').textContent = c.exp ? '💡 ' + c.exp : ''; $('wRef').innerHTML = refHtml(c); };
-    $('wQ').textContent = c.q; $('wA').textContent = ''; $('wExp').textContent = ''; $('wRef').innerHTML = ''; $('wStatus').textContent = showA ? '문제와 답' : '문제';
-    if (showA) reveal();
-    const myIdx = wi;
-    let act = await Promise.race([speak(c.q).then(() => (walking && wi === myIdx && wResolve) ? waitInput(pause) : new Promise(() => { })), new Promise(r => { wResolve = r; })]);
+    const c = wDeck[wi], meta = `${wi + 1}/${wDeck.length} · ${[c.unit, c.topic].filter(Boolean).join(' · ')}`;
+    const core = coreBlanks(c), mark = s => segments(c).map(x => x.t !== undefined ? esc(x.t) : core.includes(x.b) ? `<mark>${esc(x.b)}</mark>` : esc(x.b)).join('') || esc(s);
+    if (c.unit !== lastU) { wShow(meta, esc(unitTitle(c.unit) || c.unit), '', '', null, STATUS); await say(unitTitle(c.unit) + '.'); if (!wAct) await wait(600); }
+    if (walking && !wAct && c.topic && c.topic !== lastT && c.topic !== unitTitle(c.unit)) { wShow(meta, esc(c.topic), '', '', null, STATUS); await say(c.topic + '.'); if (!wAct) await wait(400); }
+    lastU = c.unit; lastT = c.topic;
+    if (walking && !wAct) {
+      const text = c.sentence || `${c.q} ${c.a}`;
+      if (stopAtCore && c.sentence && core.length) {
+        const masked = segments(c).map(x => x.t !== undefined ? esc(x.t) : core.includes(x.b) ? '<span class="wgap">？</span>' : esc(x.b)).join('');
+        wShow(meta, masked, '', '', null, '빈칸에 들어갈 말을 떠올려 보세요 · ' + STATUS);
+        await say(segments(c).map(x => x.t !== undefined ? x.t : core.includes(x.b) ? ', 무엇, ' : x.b).join(''));
+        if (!wAct) await wait(pause);
+        if (!wAct) { wShow(meta, mark(text), '', c.exp, c, STATUS); await say(core.join(', ') + '.'); if (!wAct) await wait(500); }
+      } else {
+        wShow(meta, mark(text), '', c.exp, c, STATUS);
+        await say(text);
+      }
+      if (walking && !wAct && $('wReadExp').checked && c.exp) { await wait(300); await say(c.exp); }
+      if (walking && !wAct) await wait(900);
+    }
     if (!walking) return;
-    reveal(); $('wStatus').textContent = '정답 — 탭: 알았다 / ← 밀기: 몰랐다';
-    if (act === 'timeout') { await speak('정답. ' + c.a); if (!walking) return; if ($('wReadExp').checked && c.exp) { await speak('해설. ' + c.exp); if (!walking) return; } act = await waitInput(5000); }
-    if (!walking) return;
-    if (act === 'know') grade(c.id, true);
-    else if (act === 'wrong') { grade(c.id, false); await speak('다시 볼게요'); }
+    const act = takeAct();
+    if (act === 'tap') { $('wStatus').textContent = '⏸ 멈춤 — 탭하면 다시 들어요'; await new Promise(r => { wWake = () => { wWake = null; r(); }; }); takeAct(); continue; } // 멈춘 문장부터 다시
+    if (act === 'left') { lastT = null; continue; }   // 같은 문장 다시
     wi++;
   }
-  if (walking) { $('wQ').textContent = '끝! 수고했어요 🎉'; $('wA').textContent = ''; $('wStatus').textContent = ''; await speak('끝났어요. 수고했어요.'); }
+  if (walking) { wShow('', '끝! 수고했어요 🎉', '', '', null, ''); await say('끝났어요. 수고했어요.'); }
 }
+
+async function quizLoop() {
+  const pause = parseInt($('wPause').value) * 1000;
+  while (walking && wi < wDeck.length) {
+    const c = wDeck[wi], meta = `${wi + 1}/${wDeck.length} · ${[c.subject, c.unit].filter(Boolean).join(' · ')}`;
+    const showA = $('wShowA').checked; // 답 같이 보기
+    const reveal = () => wShow(meta, esc(c.q), c.a, c.exp, c, '정답 — 탭: 알았다 / ← 밀기: 몰랐다');
+    if (showA) reveal(); else wShow(meta, esc(c.q), '', '', null, '문제');
+    await say(c.q);
+    if (walking && !wAct) await wait(pause);
+    if (!walking) return;
+    reveal();
+    if (!wAct) { await say('정답, ' + c.a); if ($('wReadExp').checked && c.exp && !wAct) { await wait(300); await say(c.exp); } if (walking && !wAct) await wait(5000); }
+    if (!walking) return;
+    const act = takeAct();
+    if (act === 'tap') grade(c.id, true);
+    else if (act === 'left') { grade(c.id, false); await say('다시 볼게요'); }
+    wi++;
+  }
+  if (walking) { wShow('', '끝! 수고했어요 🎉', '', '', null, ''); await say('끝났어요. 수고했어요.'); }
+}
+function wSyncUI() {
+  const story = wMode() === 'story';
+  $('wScope').classList.toggle('hidden', story); $('wShowA').closest('label').classList.toggle('hidden', story);
+  $('wCoreStop').closest('label').classList.toggle('hidden', !story);
+  $('wHelp').textContent = story
+    ? '단원 → 소제목 → 문장 순서로 이야기하듯 읽어 줘요. 탭 = 잠깐 멈춤 · ← 밀기 = 다시 듣기 · → 밀기 = 다음 문장. 화면이 꺼지면 음성이 멈추니 켜둔 채로 쓰세요.'
+    : '문제를 듣고 떠올린 뒤 정답을 들어요. 탭 = 알았다 · ← 밀기 = 몰랐다 · 아무것도 안 하면 다음 카드로 넘어가요.';
+}
+$('wMode').value = LS.get('ma_wmode', 'story');
+$('wCoreStop').checked = LS.get('ma_wcorestop', false);
+$('wMode').onchange = () => { LS.set('ma_wmode', wMode()); wSyncUI(); };
+$('wCoreStop').onchange = () => LS.set('ma_wcorestop', $('wCoreStop').checked);
+wSyncUI();
 $('wStart').onclick = async () => {
-  wDeck = shuffle(filterCards($('wSubject').value, $('wScope').value).filter(c => inPart(c, $('wPart').value)));
+  const story = wMode() === 'story';
+  const list = filterCards($('wSubject').value, story ? 'all' : $('wScope').value).filter(c => inPart(c, $('wPart').value));
+  wDeck = story ? list.sort(byOrder) : shuffle(list);
   if (!wDeck.length) { alert('볼 카드가 없어요. 범위를 바꿔 보세요.'); return; }
-  wi = 0; walking = true; $('walkScreen').classList.remove('hidden');
+  wi = 0; wAct = null; walking = true; $('walkScreen').classList.remove('hidden');
   try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch { }
-  speak(' '); // iOS: 첫 탭에서 음성 잠금 해제
-  walkLoop();
+  if ('speechSynthesis' in window) { speechSynthesis.cancel(); speechSynthesis.speak(new SpeechSynthesisUtterance(' ')); } // iOS: 첫 탭에서 음성 잠금 해제
+  story ? storyLoop() : quizLoop();
 };
 function stopWalk() {
-  walking = false; userAct('stop'); speechSynthesis.cancel();
+  walking = false; userAct('stop');
   if (wakeLock) { wakeLock.release().catch(() => { }); wakeLock = null; }
   $('walkScreen').classList.add('hidden'); refreshCommon();
 }
@@ -371,11 +450,13 @@ $('walkScreen').addEventListener('touchstart', e => { tx = e.touches[0].clientX;
 $('walkScreen').addEventListener('touchend', e => {
   if (e.target.id === 'wStop') return;
   const dx = e.changedTouches[0].clientX - tx, dy = e.changedTouches[0].clientY - ty;
-  if (dx < -60 && Math.abs(dx) > Math.abs(dy)) userAct('wrong');
-  else if (Math.abs(dx) < 15 && Math.abs(dy) < 15) userAct('know');
+  if (dx < -60 && Math.abs(dx) > Math.abs(dy)) userAct('left');
+  else if (dx > 60 && Math.abs(dx) > Math.abs(dy)) userAct('right');
+  else if (Math.abs(dx) < 15 && Math.abs(dy) < 15) userAct('tap');
   e.preventDefault();
 });
-$('walkScreen').addEventListener('click', e => { if (e.target.id !== 'wStop' && !('ontouchstart' in window)) userAct('know'); });
+$('walkScreen').addEventListener('click', e => { if (e.target.id !== 'wStop' && !('ontouchstart' in window)) userAct('tap'); });
+document.addEventListener('keydown', e => { if (!walking) return; if (e.key === 'ArrowLeft') userAct('left'); else if (e.key === 'ArrowRight') userAct('right'); else if (e.key === ' ') { e.preventDefault(); userAct('tap'); } });
 document.addEventListener('visibilitychange', async () => { if (walking && document.visibilityState === 'visible' && 'wakeLock' in navigator) { try { wakeLock = await navigator.wakeLock.request('screen'); } catch { } } });
 
 /* ===== 검수 ===== */
