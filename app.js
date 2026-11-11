@@ -522,11 +522,18 @@ function mdLite(t) {
   if (ul) out.push('</ul>');
   return out.join('').replace(/★/g, '<b>★</b>');
 }
+// kind: 'note' = 사진 속 손글씨 필기만 모은 요약. 필기 요약이 있는 과목에서만 '전체 요약 / 필기만' 칩이 보임.
+let mKind = 'sum';
 function renderSums() {
   const s = $('mSubject').value;
-  const list = allSums().filter(x => !s || s === '*' || x.subject === s);
+  const mine = allSums().filter(x => !s || s === '*' || x.subject === s);
+  const hasNote = mine.some(x => x.kind === 'note');
+  if (!hasNote) mKind = 'sum';
+  $('mKinds').innerHTML = hasNote ? [['sum', '전체 요약'], ['note', '✏️ 필기만']].map(([v, l]) => `<button class="chip ${v === mKind ? 'on' : ''}" data-k="${v}">${l}</button>`).join('') : '';
+  $('mKinds').querySelectorAll('.chip').forEach(b => b.onclick = () => { mKind = b.dataset.k; renderSums(); });
+  const list = mine.filter(x => (x.kind === 'note') === (mKind === 'note')).sort((a, b) => mKind === 'note' ? (a.unit || '').localeCompare(b.unit || '') : 0);
   $('sumList').innerHTML = list.length ? list.map(x => `
-    <details class="scard" data-id="${esc(x.id)}">
+    <details class="scard" data-id="${esc(x.id)}" ${mKind === 'note' ? 'open' : ''}>
       <summary><label onclick="event.stopPropagation()"><input type="checkbox" class="mpick"></label> ${esc(x.title || x.unit || '요약')}
         <div class="smeta">${esc([x.subject, x.unit, x.lessonDate, x.source].filter(Boolean).join(' · '))}</div></summary>
       <div class="sbody">${mdLite(x.body)}</div>
