@@ -193,3 +193,11 @@ html,body,button,a,.bk,.chip,.card,.ptile{touch-action:manipulation}
 /* 아이폰: 16px보다 작은 입력칸은 누를 때 자동 확대되므로 16px 이상으로 */
 select,textarea,input,.scard textarea{font-size:16px!important}
 @media (prefers-reduced-motion:no-preference){.ptile,.btn,.chip{transition:transform .12s,opacity .12s}}
+/* 빈칸 난이도(단계) */
+.lvs{display:flex;gap:6px;margin:6px 0 2px}
+.lv{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;padding:7px 4px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--text);cursor:pointer;font:inherit;touch-action:manipulation}
+.lv b{font-size:14px}.lv small{font-size:11.5px;opacity:.7}
+.lv.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.lv.on small{opacity:.85}
+.bopen{font-weight:600;text-decoration:underline dotted;text-underline-offset:3px;opacity:.85}
+.lvnote{margin:6px 0 0}

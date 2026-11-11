@@ -195,6 +195,30 @@ const normAns = s => String(s).replace(/[\s·.,'"‘’“”()~-]/g, '').toLowe
 const byOrder = (a, b) => (a.order ?? 1e9) - (b.order ?? 1e9) || (a.lessonDate || '').localeCompare(b.lessonDate || '') || (a.unit || '').localeCompare(b.unit || '') || String(a.id).localeCompare(String(b.id));
 
 let bUnit = null, bState = {}; // bState[카드id-번호] = 'shown' | 'ok' | 'no'
+/* 난이도(단계): 1 큰 틀(소제목마다 핵심 문장 1~2개, 핵심 빈칸만) → 2 핵심 빈칸(모든 문장) → 3 전체 빈칸
+   데이터로 정할 수도 있음: 카드 core = [핵심 빈칸...], lv = 1(큰 틀 문장) / 2(세부 문장) */
+let bLevel = LS.get('ma_blevel', 3);
+const normKey = s => String(s).replace(/[\s·.,'"‘’“”()~\-『』「」]/g, '').toLowerCase();
+const NAMED = /\d|『|「|(회|당|단|사건|운동|선언|회담|조약|협정|법|론|군|대|혁명|정부|정변|항쟁|의거|시위|체제|헌법|계획|사학|학회|연맹|동맹|교|제|권|성명|부|소|원|사)$/;
+function coreBlanks(c) {
+  const bs = (c.blanks || []).filter(Boolean);
+  if (Array.isArray(c.core) && c.core.length) return bs.filter(b => c.core.includes(b));
+  const a = normKey(c.a || ''), hit = bs.filter(b => normKey(b) && a.includes(normKey(b)));
+  if (hit.length) return hit;
+  const score = b => { const k = normKey(b); return [...new Set(k)].filter(ch => a.includes(ch)).length / Math.max(1, k.length); };
+  return bs.length ? [bs.slice().sort((x, y) => score(y) - score(x))[0]] : [];
+}
+// 큰 틀 문장: 소제목마다 핵심 빈칸이 이름·사건·연도인 문장 앞에서 2개 (없으면 첫 문장)
+function frameIds(list) {
+  const ids = new Set(), byTopic = {};
+  list.forEach(c => (byTopic[(c.unit || '') + '|' + (c.topic || '')] ||= []).push(c));
+  Object.values(byTopic).forEach(cs => {
+    const tagged = cs.filter(c => c.lv === 1);
+    const pick = tagged.length ? tagged : (cs.filter(c => c.lv !== 2 && coreBlanks(c).some(b => NAMED.test(b))).slice(0, 2));
+    (pick.length ? pick : cs.slice(0, 1)).forEach(c => ids.add(c.id));
+  });
+  return ids;
+}
 function blankCards() {
   return filterCards(curSubject && curSubject !== '*' ? curSubject : '*', 'all').filter(c => c.sentence && segments(c).some(x => x.b)).sort(byOrder);
 }
@@ -207,18 +231,23 @@ function renderBlank() {
   $('bUnits').querySelectorAll('.chip').forEach(b => b.onclick = () => { bUnit = b.dataset.u; bState = {}; renderBlank(); window.scrollTo(0, 0); });
   const onChip = $('bUnits').querySelector('.on'); if (onChip) $('bUnits').scrollLeft = onChip.offsetLeft - 20;
   let list = all.filter(c => (c.unit || '기타') === bUnit);
+  const unitN = list.length;
+  if (bLevel === 1) { const f = frameIds(list); list = list.filter(c => f.has(c.id)); }
+  document.querySelectorAll('#bLevels .lv').forEach(b => b.classList.toggle('on', +b.dataset.lv === bLevel));
   if ($('bWrongOnly').checked) list = list.filter(c => (bWrong[c.id] || []).length);
   const type = $('bMode').value === 'type', hint = $('bHint').checked;
   if (!list.length) {
     $('blankBox').innerHTML = `<p class="muted center" style="padding:30px 0">${all.length ? ($('bWrongOnly').checked ? '이 단원에 틀린 빈칸이 없어요 🎉' : '빈칸 문장이 없어요') : '이 과목에는 아직 빈칸 문장이 없어요.'}</p>`;
     $('bBar').innerHTML = ''; $('bTip').textContent = ''; return;
   }
-  let html = '', topic = null, n = 0;
+  let html = bLevel === 1 && unitN > list.length ? `<p class="muted lvnote">큰 틀: 문장 ${list.length}개 / ${unitN}개 · 나머지 세부 문장은 2단계부터 나와요</p>` : '', topic = null, n = 0;
   list.forEach(c => {
+    const core = bLevel < 3 ? new Set(coreBlanks(c)) : null;
     if ((c.topic || '') !== topic) { topic = c.topic || ''; if (topic) html += `<div class="btopic">${esc(topic)}</div>`; }
     const wr = bWrong[c.id] || [];
     html += `<div class="bsent ${wr.length ? 'hasWrong' : ''}" data-id="${esc(c.id)}">` + segments(c).map((x, i) => {
       if (x.t !== undefined) return esc(x.t);
+      if (core && !core.has(x.b)) return `<span class="bopen">${esc(x.b)}</span>`;
       n++; const key = `${c.id}-${i}`, st = bState[key];
       const label = hint ? chosung(x.b) : '①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳'[(n - 1) % 20];
       if (type) {
@@ -237,9 +266,11 @@ function updateBlankBar(n, type) {
   const vals = Object.values(bState);
   const seen = vals.length, no = vals.filter(v => v === 'no').length;
   $('bBar').innerHTML = `<span class="stat">빈칸 <b>${n}</b> · 확인 <b>${seen}</b> · 몰랐음 <b class="wdot">${no}</b></span>` +
+    (bLevel < 3 && n && seen >= n && !no ? `<button class="btn small good" id="bNext">다음 단계 →</button>` : '') +
     (type ? `<button class="btn small good" id="bCheck">채점</button>` : `<button class="btn small" id="bShowAll">모두 보기</button>`) +
     `<button class="btn small" id="bHideAll">다시 가리기</button>`;
   if ($('bCheck')) $('bCheck').onclick = checkTyped;
+  if ($('bNext')) $('bNext').onclick = () => setLevel(bLevel + 1);
   if ($('bShowAll')) $('bShowAll').onclick = () => { document.querySelectorAll('#blankBox .bk').forEach(b => { if (!bState[b.dataset.k]) bState[b.dataset.k] = 'shown'; }); renderBlank(); };
   $('bHideAll').onclick = () => { bState = {}; renderBlank(); };
 }
@@ -279,6 +310,8 @@ function checkTyped() {
   document.querySelectorAll('#blankBox .bin').forEach(inp => { inp.value = typed[inp.dataset.k] || ''; });
 }
 ['bMode', 'bHint', 'bWrongOnly'].forEach(id => $(id).onchange = () => { bState = {}; renderBlank(); });
+function setLevel(l) { bLevel = l; LS.set('ma_blevel', l); bState = {}; renderBlank(); window.scrollTo(0, 0); }
+document.querySelectorAll('#bLevels .lv').forEach(b => b.onclick = () => setLevel(+b.dataset.lv));
 
 /* ===== 걷기 모드 ===== */
 let walking = false, wDeck = [], wi = 0, wResolve = null, wakeLock = null, koVoice = null;
