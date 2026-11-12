@@ -1821,11 +1821,11 @@ aquaculture|수산 양식
   </header>
 
   <nav class="menu" aria-label="학습 메뉴">
-    <button class="mtile" data-t="card"><span class="ic">🃏</span><b>카드</b><small>뒤집으며 외우기</small></button>
-    <button class="mtile" data-t="quiz"><span class="ic">✅</span><b>4지선다</b><small>뜻·단어 고르기</small></button>
-    <button class="mtile" data-t="spell"><span class="ic">✍️</span><b>철자</b><small>뜻 보고 영어로 쓰기</small></button>
-    <button class="mtile" data-t="list"><span class="ic">📖</span><b>단어장</b><small>목록·검색·뜻 가리기</small></button>
-    <button class="mtile" data-t="study"><span class="ic">📰</span><b>지문 학습</b><small>빠바 지문 흐름·해석</small></button>
+    <a class="mtile" href="#card" data-t="card"><span class="ic">🃏</span><b>카드</b><small>뒤집으며 외우기</small></a>
+    <a class="mtile" href="#quiz" data-t="quiz"><span class="ic">✅</span><b>4지선다</b><small>뜻·단어 고르기</small></a>
+    <a class="mtile" href="#spell" data-t="spell"><span class="ic">✍️</span><b>철자</b><small>뜻 보고 영어로 쓰기</small></a>
+    <a class="mtile" href="#list" data-t="list"><span class="ic">📖</span><b>단어장</b><small>목록·검색·뜻 가리기</small></a>
+    <a class="mtile" href="#study" data-t="study"><span class="ic">📰</span><b>지문 학습</b><small>빠바 지문 흐름·해석</small></a>
     <a class="mtile" href="english.html"><span class="ic">📝</span><b>영어 복습</b><small>어형변화 오답</small></a>
   </nav>
 
@@ -2057,12 +2057,18 @@ function render(t) {
   if (t === "study") renderStudy();
   window.scrollTo(0, 0);
 }
+// 누르면 바로 그 페이지를 그림 (hashchange에만 기대지 않음: 아이폰 Safari에서 안 넘어가던 문제)
 function showTab(t) {
   if (tab === "home" && t !== "home") fromHome = true;
-  if (location.hash.slice(1) === t) render(t); else location.hash = t === "home" ? "" : t;
+  const h = t === "home" ? location.pathname : "#" + t;
+  if (location.hash.slice(1) !== (t === "home" ? "" : t)) history.pushState(null, "", h);
+  render(t);
 }
-window.addEventListener("hashchange", () => render(location.hash.slice(1)));
-document.querySelectorAll(".mtile[data-t]").forEach(t => t.onclick = () => showTab(t.dataset.t));
+const fromUrl = () => { const t = location.hash.slice(1); if (t !== tab && !(t === "" && tab === "home")) render(t); };
+window.addEventListener("hashchange", fromUrl);
+window.addEventListener("popstate", fromUrl);
+window.addEventListener("pageshow", fromUrl);
+document.querySelectorAll(".mtile[data-t]").forEach(t => t.addEventListener("click", e => { e.preventDefault(); showTab(t.dataset.t); }));
 $("backBtn").onclick = () => {
   if (fromHome) { fromHome = false; history.back(); }
   else { history.replaceState(null, "", location.pathname); render("home"); }
