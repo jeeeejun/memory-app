@@ -2419,4 +2419,5 @@ function renderStudy() {
 
 function resetAll() { startCards(); startQuiz(); startSpell(); if (tab === "list") renderList(); }
 renderChips(); renderProgress(); resetAll(); render(location.hash.slice(1));
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 </script>
