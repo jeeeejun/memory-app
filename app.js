@@ -121,7 +121,8 @@ document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
   document.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('active', x === b));
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.id === 'tab-' + b.dataset.tab));
   $('sheet').classList.remove('show');
-  if (b.dataset.tab === 'cards') startDeck();
+  if (!MANAGE) LS.set('ma_tab', b.dataset.tab);
+  if (b.dataset.tab === 'cards') startDeck(true);
   if (b.dataset.tab === 'blank') renderBlank();
   window.scrollTo(0, 0);
   if (b.dataset.tab === 'review') renderReview();
@@ -137,10 +138,20 @@ function refHtml(c) { return (c.ref || []).map(([o, t]) => `<div class="rl"><div
 
 /* ===== 카드 모드 ===== */
 let deck = [], di = 0, shown = false;
-function startDeck() {
-  deck = filterCards($('fSubject').value, $('fScope').value).filter(c => inPart(c, $('fPart').value)).sort(byOrder);
-  if ($('fShuffle').checked) deck = shuffle(deck);
-  di = 0; showCard();
+// 카드 묶음(순서·위치)도 저장 → 새로고침·탭 이동 후에도 보던 카드부터 이어서. 범위를 바꾸면 새로 섞음.
+function deckKey() { return [$('fSubject').value, $('fScope').value, $('fPart').value, $('fShuffle').checked].join('|'); }
+function saveDeck() { LS.set('ma_deck', { key: deckKey(), ids: deck.map(c => c.id), di }); }
+function startDeck(resume) {
+  const saved = LS.get('ma_deck', null);
+  if (resume && saved && saved.key === deckKey()) {
+    const m = {}; allCards().forEach(c => m[c.id] = c);
+    deck = saved.ids.map(id => m[id]).filter(c => c && c.status === '확정'); di = Math.min(saved.di || 0, deck.length);
+  } else {
+    deck = filterCards($('fSubject').value, $('fScope').value).filter(c => inPart(c, $('fPart').value)).sort(byOrder);
+    if ($('fShuffle').checked) deck = shuffle(deck);
+    di = 0;
+  }
+  saveDeck(); showCard();
 }
 function showCard() {
   shown = false;
@@ -162,7 +173,7 @@ function showCard() {
 }
 $('cardBox').onclick = e => { if (e.target.id === 'cStar') return; if (di < deck.length) { shown = !shown; $('cA').classList.toggle('hidden', !shown); $('cExp').classList.toggle('hidden', !shown || !deck[di].exp); $('cRef').classList.toggle('hidden', !shown || !(deck[di].ref || []).length); $('cHint').classList.toggle('hidden', shown); } };
 $('cStar').onclick = e => { e.stopPropagation(); const id = deck[di]?.id; if (!id) return; stars = stars.includes(id) ? stars.filter(x => x !== id) : [...stars, id]; saveAll(); $('cStar').textContent = stars.includes(id) ? '★' : '☆'; };
-function answerCard(k) { if (di >= deck.length) return; grade(deck[di].id, k); di++; showCard(); refreshCommon(); }
+function answerCard(k) { if (di >= deck.length) return; grade(deck[di].id, k); di++; saveDeck(); showCard(); refreshCommon(); }
 $('bRight').onclick = () => answerCard(true);
 $('bWrong').onclick = () => answerCard(false);
 $('bMid').onclick = () => answerCard('mid');
@@ -173,10 +184,11 @@ $('cReset').onclick = () => {
   const label = $('fPart').selectedOptions[0]?.textContent.replace(/\s*\(\d+\)$/, '') || '이 범위';
   if (!n) { alert('초기화할 기록이 없어요.'); return; }
   if (!confirm(`「${label}」 카드 ${n}장의 기록(알았다·몰랐다)을 지울까요?\n모든 카드가 다시 '오늘 복습할 카드'에 나와요.`)) return;
-  ids.forEach(id => { delete prog[id]; delete bWrong[id]; });
+  ids.forEach(id => { delete prog[id]; delete bWrong[id]; }); clearBState(ids.map(id => ({ id })));
   saveAll(); startDeck(); refreshCommon();
 };
-['fSubject', 'fScope', 'fShuffle', 'fReverse'].forEach(id => $(id).onchange = startDeck);
+['fSubject', 'fScope', 'fShuffle', 'fReverse'].forEach(id => $(id).onchange = () => { LS.set('ma_' + id, $(id).type === 'checkbox' ? $(id).checked : $(id).value); startDeck(); });
+['fScope', 'fShuffle', 'fReverse'].forEach(id => { const v = LS.get('ma_' + id, null); if (v !== null) $(id).type === 'checkbox' ? $(id).checked = v : $(id).value = v; });
 $('fSubject').addEventListener('change', () => { fillPartSelect($('fPart'), 'fSubject'); startDeck(); });
 $('fPart').onchange = () => { LS.set('ma_fPart', $('fPart').value); startDeck(); };
 $('wSubject').addEventListener('change', () => fillPartSelect($('wPart'), 'wSubject'));
@@ -204,7 +216,11 @@ function chosung(w) { return [...w].map(ch => { const c = ch.charCodeAt(0) - 0xA
 const normAns = s => String(s).replace(/[\s·.,'"‘’“”()~-]/g, '').toLowerCase();
 const byOrder = (a, b) => (a.order ?? 1e9) - (b.order ?? 1e9) || (a.lessonDate || '').localeCompare(b.lessonDate || '') || (a.unit || '').localeCompare(b.unit || '') || String(a.id).localeCompare(String(b.id));
 
-let bUnit = null, bState = {}; // bState[카드id-번호] = 'shown' | 'ok' | 'no'
+// 빈칸 진행 상태는 기기에 저장 → 새로고침해도 이어서 함. bState[카드id-번호] = 'shown'(답 봄) | 'ok'(알았음) | 'no'(몰랐음)
+let bState = LS.get('ma_bstate', {}), bUnitBySubj = LS.get('ma_bunit', {});
+let bUnit = bUnitBySubj[LS.get('ma_subject', '')] || null;
+const saveBState = () => LS.set('ma_bstate', bState);
+function clearBState(cards) { cards.forEach(c => Object.keys(bState).forEach(k => { if (k.startsWith(c.id + '-') && /^\d+$/.test(k.slice(c.id.length + 1))) delete bState[k]; })); saveBState(); }
 /* 난이도(단계): 1 큰 틀(소제목마다 핵심 문장 1~2개, 핵심 빈칸만) → 2 핵심 빈칸(모든 문장) → 3 전체 빈칸
    데이터로 정할 수도 있음: 카드 core = [핵심 빈칸...], lv = 1(큰 틀 문장) / 2(세부 문장) */
 let bLevel = LS.get('ma_blevel', 3);
@@ -242,10 +258,11 @@ function wrongIdx(c) {
 function renderBlank() {
   const all = blankCards();
   const units = [...new Set(all.map(c => c.unit || '기타'))];
-  if (!units.includes(bUnit)) bUnit = units[0] || null;
+  if (!units.includes(bUnit)) bUnit = bUnitBySubj[curSubject] && units.includes(bUnitBySubj[curSubject]) ? bUnitBySubj[curSubject] : units[0] || null;
+  if (bUnit && bUnitBySubj[curSubject] !== bUnit) { bUnitBySubj[curSubject] = bUnit; LS.set('ma_bunit', bUnitBySubj); }
   const wrongN = u => all.filter(c => (c.unit || '기타') === u && wrongIdx(c).length).length;
   $('bUnits').innerHTML = units.map(u => `<button class="chip ${u === bUnit ? 'on' : ''}" data-u="${esc(u)}">${esc(u)}${wrongN(u) ? ` <span class="wdot">●${wrongN(u)}</span>` : ''}</button>`).join('');
-  $('bUnits').querySelectorAll('.chip').forEach(b => b.onclick = () => { bUnit = b.dataset.u; bState = {}; renderBlank(); window.scrollTo(0, 0); });
+  $('bUnits').querySelectorAll('.chip').forEach(b => b.onclick = () => { bUnit = b.dataset.u; renderBlank(); window.scrollTo(0, 0); });
   const onChip = $('bUnits').querySelector('.on'); if (onChip) $('bUnits').scrollLeft = onChip.offsetLeft - 20;
   let list = all.filter(c => (c.unit || '기타') === bUnit);
   const unitN = list.length;
@@ -271,25 +288,27 @@ function renderBlank() {
         const w = Math.max(3.5, x.b.length * 0.95 + 1.2);
         return `<input type="text" class="bin ${st || ''}" data-k="${key}" data-i="${i}" data-a="${esc(x.b)}" style="width:${w}em" placeholder="${esc(label)}" autocomplete="off" autocorrect="off" spellcheck="false">${st === 'no' ? `<span class="bfix">${esc(x.b)}</span>` : ''}`;
       }
-      return `<button class="bk ${st || ''}" data-k="${key}" data-i="${i}" data-a="${esc(x.b)}" data-l="${esc(label)}">${st && st !== 'was' ? esc(x.b) : esc(label)}</button>`;
+      const judge = st === 'shown' ? `<span class="bjudge"><button class="bj ok" data-j="ok" data-k="${key}" data-i="${i}">○ 알았음</button><button class="bj no" data-j="no" data-k="${key}" data-i="${i}">✕ 몰랐음</button></span>` : '';
+      return `<button class="bk ${st || ''}" data-k="${key}" data-i="${i}" data-a="${esc(x.b)}">${st && st !== 'was' ? esc(x.b) : esc(label)}</button>${judge}`;
     }).join('') + '</div>';
   });
   $('blankBox').innerHTML = html; $('bReset').classList.remove('hidden');
   updateBlankBar(n, type);
   $('bTip').innerHTML = type ? '빈칸에 답을 쓰고 <b>채점</b>을 누르세요. 띄어쓰기·가운뎃점(·)은 무시해요. 틀린 빈칸은 \'틀린 것만\'으로 다시 볼 수 있어요.'
-    : '빈칸을 누르면 답이 보여요. <b>한 번 더 누르면 \'몰랐음\'(빨강)</b>, 다시 누르면 \'알았음\'(초록)이에요. 몰랐음은 저장돼서 다음에도 <b>빨간 테두리</b>로 다시 물어봐요 — 맞히면(초록) 지워지고, 아래 \'처음부터 다시\'로 한꺼번에 지울 수 있어요.';
+    : '빈칸을 누르면 답과 <b>○ 알았음 / ✕ 몰랐음</b> 버튼이 나와요. 고른 뒤에도 답을 다시 누르면 바꿀 수 있어요. 진행 상황은 저장돼서 새로고침해도 이어져요. 몰랐음은 다음에도 <b>빨간 테두리</b>로 다시 물어봐요.';
 }
 function updateBlankBar(n, type) {
-  const vals = Object.values(bState);
-  const seen = vals.length, no = vals.filter(v => v === 'no').length;
-  $('bBar').innerHTML = `<span class="stat">빈칸 <b>${n}</b> · 확인 <b>${seen}</b> · 몰랐음 <b class="wdot">${no}</b></span>` +
-    (bLevel < 3 && n && seen >= n && !no ? `<button class="btn small good" id="bNext">다음 단계 →</button>` : '') +
+  // 지금 화면에 있는 빈칸만 셈
+  const keys = [...document.querySelectorAll('#blankBox [data-k].bk, #blankBox .bin')].map(x => x.dataset.k);
+  const ok = keys.filter(k => bState[k] === 'ok').length, no = keys.filter(k => bState[k] === 'no').length, left = n - ok - no;
+  $('bBar').innerHTML = `<span class="stat">빈칸 <b>${n}</b> · <span class="okc">○ <b>${ok}</b></span> · <span class="noc">✕ <b>${no}</b></span> · 남음 <b>${left}</b></span>` +
+    (bLevel < 3 && n && ok === n ? `<button class="btn small good" id="bNext">다음 단계 →</button>` : '') +
     (type ? `<button class="btn small good" id="bCheck">채점</button>` : `<button class="btn small" id="bShowAll">모두 보기</button>`) +
     `<button class="btn small" id="bHideAll">다시 가리기</button>`;
   if ($('bCheck')) $('bCheck').onclick = checkTyped;
   if ($('bNext')) $('bNext').onclick = () => setLevel(bLevel + 1);
-  if ($('bShowAll')) $('bShowAll').onclick = () => { document.querySelectorAll('#blankBox .bk').forEach(b => { if (!bState[b.dataset.k]) bState[b.dataset.k] = 'shown'; }); renderBlank(); };
-  $('bHideAll').onclick = () => { bState = {}; renderBlank(); };
+  if ($('bShowAll')) $('bShowAll').onclick = () => { keys.forEach(k => { if (!bState[k]) bState[k] = 'shown'; }); saveBState(); renderBlank(); };
+  $('bHideAll').onclick = () => { keys.forEach(k => delete bState[k]); saveBState(); renderBlank(); };
 }
 function markBlank(cardId, i, wrong) {
   const set = new Set(bWrong[cardId] || []);
@@ -300,15 +319,11 @@ function markBlank(cardId, i, wrong) {
   saveAll();
 }
 $('blankBox').onclick = e => {
-  const b = e.target.closest('.bk'); if (!b) return;
-  const id = b.closest('.bsent').dataset.id, k = b.dataset.k, st = bState[k];
-  const next = !st || st === 'was' ? 'shown' : st === 'shown' || st === 'ok' ? 'no' : 'ok';
-  bState[k] = next;
-  if (next === 'no') markBlank(id, b.dataset.i, true);
-  if (next === 'ok') markBlank(id, b.dataset.i, false);
-  b.className = 'bk ' + next; b.textContent = b.dataset.a;
-  b.closest('.bsent').classList.toggle('hasWrong', !!(bWrong[id] || []).length || !!b.closest('.bsent').querySelector('.bk.was'));
-  updateBlankBar(document.querySelectorAll('#blankBox .bk').length, false);
+  const j = e.target.closest('.bj'), b = j || e.target.closest('.bk'); if (!b) return;
+  const id = b.closest('.bsent').dataset.id, k = b.dataset.k;
+  if (j) { bState[k] = j.dataset.j; markBlank(id, j.dataset.i, j.dataset.j === 'no'); } // 알았음 → 몰랐음 기록 지움, 몰랐음 → 기록
+  else bState[k] = 'shown';   // 답 보기 (이미 고른 것도 다시 누르면 바꿀 수 있게 버튼이 나옴)
+  saveBState(); renderBlank();
 };
 $('blankBox').addEventListener('keydown', e => {
   if (e.key !== 'Enter' || !e.target.classList.contains('bin')) return;
@@ -323,22 +338,23 @@ function checkTyped() {
     bState[inp.dataset.k] = ok ? 'ok' : 'no';
     markBlank(inp.closest('.bsent').dataset.id, inp.dataset.i, !ok);
   });
-  renderBlank();
+  saveBState(); renderBlank();
   document.querySelectorAll('#blankBox .bin').forEach(inp => { inp.value = typed[inp.dataset.k] || ''; });
 }
-['bMode', 'bHint', 'bWrongOnly'].forEach(id => $(id).onchange = () => { bState = {}; renderBlank(); });
+['bMode', 'bHint', 'bWrongOnly'].forEach(id => $(id).onchange = () => { LS.set('ma_' + id, $(id).type === 'checkbox' ? $(id).checked : $(id).value); renderBlank(); });
+$('bMode').value = LS.get('ma_bMode', 'tap'); $('bHint').checked = LS.get('ma_bHint', false); $('bWrongOnly').checked = LS.get('ma_bWrongOnly', false);
 // 처음부터 다시: 이 단원만 / 이 과목 전체의 '몰랐음' 기록과 지금 확인한 표시를 지움
 function resetBlanks(whole) {
   const list = blankCards().filter(c => whole || (c.unit || '기타') === bUnit);
   const n = list.filter(c => bWrong[c.id]).length, where = whole ? '전체 단원' : `「${bUnit}」`;
   if (!confirm(`${where} 빈칸을 처음부터 다시 할까요?${n ? `\n몰랐음(빨강) 표시가 있는 문장 ${n}개의 기록이 지워져요.` : ''}`)) return;
-  list.forEach(c => delete bWrong[c.id]); saveAll();
-  bState = {}; if ($('bWrongOnly').checked) $('bWrongOnly').checked = false;
+  list.forEach(c => delete bWrong[c.id]); saveAll(); clearBState(list);
+  if ($('bWrongOnly').checked) { $('bWrongOnly').checked = false; LS.set('ma_bWrongOnly', false); }
   renderBlank(); window.scrollTo(0, 0);
 }
 $('bResetUnit').onclick = () => resetBlanks(false);
 $('bResetAll').onclick = () => resetBlanks(true);
-function setLevel(l) { bLevel = l; LS.set('ma_blevel', l); bState = {}; renderBlank(); window.scrollTo(0, 0); }
+function setLevel(l) { bLevel = l; LS.set('ma_blevel', l); renderBlank(); window.scrollTo(0, 0); }
 document.querySelectorAll('#bLevels .lv').forEach(b => b.onclick = () => setLevel(+b.dataset.lv));
 
 /* ===== 걷기 모드 ===== */
@@ -751,10 +767,10 @@ async function init() {
   try { const r = await fetch('data/summaries.json', { cache: 'no-cache' }); baseSums = await r.json(); } catch { baseSums = []; }
   try { const r = await fetch('data/sources.json', { cache: 'no-cache' }); baseSrcs = await r.json(); } catch { baseSrcs = []; }
   try { const r = await fetch('data/texts.json', { cache: 'no-cache' }); baseTxts = await r.json(); } catch { baseTxts = []; }
-  refreshCommon(); startDeck();
+  refreshCommon(); startDeck(true);
   if (MANAGE) { document.body.classList.add('manage'); goTab('review'); return; }
   if (!curSubject || !subjects().includes(curSubject)) showPicker();
-  else renderBlank();
+  else { const t = LS.get('ma_tab', 'blank'), btn = document.querySelector(`.tabs button[data-tab="${t}"]`); btn && !btn.classList.contains('hidden') && t !== 'walk' ? goTab(t) : renderBlank(); }
 }
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => { });
 init();
