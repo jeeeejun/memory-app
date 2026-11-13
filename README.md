@@ -11,3 +11,4 @@
 - 한국사 데이터는 `tools/history_0304.py`로 만들어요(이번 기준: 빨간 밑줄. 외울 부분의 표시 기준은 매번 정할 수 있어요). 새 사진을 추가하는 방법은 `CLAUDE.md`에 있어요.
 - 국어 데이터는 `tools/korean_01.py`로 만들어요(기준: 밑줄·형광펜·손글씨 필기).
 - 검수·카드 추가·백업은 본 화면에 없고 따로 있어요: https://jeeeejun.github.io/memory-app/manage.html
+- 국어 문법(한글 맞춤법) 덱: `korean-grammar.html` — 처음 화면 '국어 문법' 칸. 카드는 `data/korean-grammar.json`.
