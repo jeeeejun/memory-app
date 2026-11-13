@@ -232,11 +232,18 @@ function frameIds(list) {
 function blankCards() {
   return filterCards(curSubject && curSubject !== '*' ? curSubject : '*', 'all').filter(c => c.sentence && segments(c).some(x => x.b)).sort(byOrder);
 }
+// 저장된 '몰랐음' 빈칸 번호 중 지금 문장에 실제로 있는 것만 (문장이 바뀌어 사라진 번호는 지움)
+function wrongIdx(c) {
+  const w = bWrong[c.id]; if (!w) return [];
+  const seg = segments(c), ok = w.filter(i => seg[i] && seg[i].b !== undefined);
+  if (ok.length !== w.length) { if (ok.length) bWrong[c.id] = ok; else delete bWrong[c.id]; LS.set('ma_bwrong', bWrong); }
+  return ok;
+}
 function renderBlank() {
   const all = blankCards();
   const units = [...new Set(all.map(c => c.unit || '기타'))];
   if (!units.includes(bUnit)) bUnit = units[0] || null;
-  const wrongN = u => all.filter(c => (c.unit || '기타') === u && (bWrong[c.id] || []).length).length;
+  const wrongN = u => all.filter(c => (c.unit || '기타') === u && wrongIdx(c).length).length;
   $('bUnits').innerHTML = units.map(u => `<button class="chip ${u === bUnit ? 'on' : ''}" data-u="${esc(u)}">${esc(u)}${wrongN(u) ? ` <span class="wdot">●${wrongN(u)}</span>` : ''}</button>`).join('');
   $('bUnits').querySelectorAll('.chip').forEach(b => b.onclick = () => { bUnit = b.dataset.u; bState = {}; renderBlank(); window.scrollTo(0, 0); });
   const onChip = $('bUnits').querySelector('.on'); if (onChip) $('bUnits').scrollLeft = onChip.offsetLeft - 20;
@@ -244,33 +251,33 @@ function renderBlank() {
   const unitN = list.length;
   if (bLevel === 1) { const f = frameIds(list); list = list.filter(c => f.has(c.id)); }
   document.querySelectorAll('#bLevels .lv').forEach(b => b.classList.toggle('on', +b.dataset.lv === bLevel));
-  if ($('bWrongOnly').checked) list = list.filter(c => (bWrong[c.id] || []).length);
+  if ($('bWrongOnly').checked) list = list.filter(c => wrongIdx(c).length);
   const type = $('bMode').value === 'type', hint = $('bHint').checked;
   if (!list.length) {
     $('blankBox').innerHTML = `<p class="muted center" style="padding:30px 0">${all.length ? ($('bWrongOnly').checked ? '이 단원에 틀린 빈칸이 없어요 🎉' : '빈칸 문장이 없어요') : '이 과목에는 아직 빈칸 문장이 없어요.'}</p>`;
-    $('bBar').innerHTML = ''; $('bTip').textContent = ''; return;
+    $('bBar').innerHTML = ''; $('bTip').textContent = ''; $('bReset').classList.toggle('hidden', !all.length); return;
   }
   let html = bLevel === 1 && unitN > list.length ? `<p class="muted lvnote">큰 틀: 문장 ${list.length}개 / ${unitN}개 · 나머지 세부 문장은 2단계부터 나와요</p>` : '', topic = null, n = 0;
   list.forEach(c => {
     const core = bLevel < 3 ? new Set(coreBlanks(c)) : null;
     if ((c.topic || '') !== topic) { topic = c.topic || ''; if (topic) html += `<div class="btopic">${esc(topic)}</div>`; }
-    const wr = bWrong[c.id] || [];
-    html += `<div class="bsent ${wr.length ? 'hasWrong' : ''}" data-id="${esc(c.id)}">` + segments(c).map((x, i) => {
+    const wr = new Set(wrongIdx(c)); // 전에 몰랐던 빈칸은 단계와 상관없이 항상 가려서 다시 물어봄
+    html += `<div class="bsent ${wr.size ? 'hasWrong' : ''}" data-id="${esc(c.id)}">` + segments(c).map((x, i) => {
       if (x.t !== undefined) return esc(x.t);
-      if (core && !core.has(x.b)) return `<span class="bopen">${esc(x.b)}</span>`;
-      n++; const key = `${c.id}-${i}`, st = bState[key];
+      if (core && !core.has(x.b) && !wr.has(i)) return `<span class="bopen">${esc(x.b)}</span>`;
+      n++; const key = `${c.id}-${i}`, st = bState[key] || (wr.has(i) ? 'was' : '');
       const label = hint ? chosung(x.b) : '①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳'[(n - 1) % 20];
       if (type) {
         const w = Math.max(3.5, x.b.length * 0.95 + 1.2);
         return `<input type="text" class="bin ${st || ''}" data-k="${key}" data-i="${i}" data-a="${esc(x.b)}" style="width:${w}em" placeholder="${esc(label)}" autocomplete="off" autocorrect="off" spellcheck="false">${st === 'no' ? `<span class="bfix">${esc(x.b)}</span>` : ''}`;
       }
-      return `<button class="bk ${st || ''}" data-k="${key}" data-i="${i}" data-a="${esc(x.b)}" data-l="${esc(label)}">${st ? esc(x.b) : esc(label)}</button>`;
+      return `<button class="bk ${st || ''}" data-k="${key}" data-i="${i}" data-a="${esc(x.b)}" data-l="${esc(label)}">${st && st !== 'was' ? esc(x.b) : esc(label)}</button>`;
     }).join('') + '</div>';
   });
-  $('blankBox').innerHTML = html;
+  $('blankBox').innerHTML = html; $('bReset').classList.remove('hidden');
   updateBlankBar(n, type);
   $('bTip').innerHTML = type ? '빈칸에 답을 쓰고 <b>채점</b>을 누르세요. 띄어쓰기·가운뎃점(·)은 무시해요. 틀린 빈칸은 \'틀린 것만\'으로 다시 볼 수 있어요.'
-    : '빈칸을 누르면 답이 보여요. <b>한 번 더 누르면 \'몰랐음\'(빨강)</b>으로 표시되고, 다시 누르면 \'알았음\'(초록)으로 바뀌어요. 몰랐던 빈칸은 \'틀린 것만\'과 카드 탭의 \'몰랐던 카드\'에 모여요.';
+    : '빈칸을 누르면 답이 보여요. <b>한 번 더 누르면 \'몰랐음\'(빨강)</b>, 다시 누르면 \'알았음\'(초록)이에요. 몰랐음은 저장돼서 다음에도 <b>빨간 테두리</b>로 다시 물어봐요 — 맞히면(초록) 지워지고, 아래 \'처음부터 다시\'로 한꺼번에 지울 수 있어요.';
 }
 function updateBlankBar(n, type) {
   const vals = Object.values(bState);
@@ -295,12 +302,12 @@ function markBlank(cardId, i, wrong) {
 $('blankBox').onclick = e => {
   const b = e.target.closest('.bk'); if (!b) return;
   const id = b.closest('.bsent').dataset.id, k = b.dataset.k, st = bState[k];
-  const next = !st ? 'shown' : st === 'shown' || st === 'ok' ? 'no' : 'ok';
+  const next = !st || st === 'was' ? 'shown' : st === 'shown' || st === 'ok' ? 'no' : 'ok';
   bState[k] = next;
   if (next === 'no') markBlank(id, b.dataset.i, true);
   if (next === 'ok') markBlank(id, b.dataset.i, false);
   b.className = 'bk ' + next; b.textContent = b.dataset.a;
-  b.closest('.bsent').classList.toggle('hasWrong', !!(bWrong[id] || []).length);
+  b.closest('.bsent').classList.toggle('hasWrong', !!(bWrong[id] || []).length || !!b.closest('.bsent').querySelector('.bk.was'));
   updateBlankBar(document.querySelectorAll('#blankBox .bk').length, false);
 };
 $('blankBox').addEventListener('keydown', e => {
@@ -320,6 +327,17 @@ function checkTyped() {
   document.querySelectorAll('#blankBox .bin').forEach(inp => { inp.value = typed[inp.dataset.k] || ''; });
 }
 ['bMode', 'bHint', 'bWrongOnly'].forEach(id => $(id).onchange = () => { bState = {}; renderBlank(); });
+// 처음부터 다시: 이 단원만 / 이 과목 전체의 '몰랐음' 기록과 지금 확인한 표시를 지움
+function resetBlanks(whole) {
+  const list = blankCards().filter(c => whole || (c.unit || '기타') === bUnit);
+  const n = list.filter(c => bWrong[c.id]).length, where = whole ? '전체 단원' : `「${bUnit}」`;
+  if (!confirm(`${where} 빈칸을 처음부터 다시 할까요?${n ? `\n몰랐음(빨강) 표시가 있는 문장 ${n}개의 기록이 지워져요.` : ''}`)) return;
+  list.forEach(c => delete bWrong[c.id]); saveAll();
+  bState = {}; if ($('bWrongOnly').checked) $('bWrongOnly').checked = false;
+  renderBlank(); window.scrollTo(0, 0);
+}
+$('bResetUnit').onclick = () => resetBlanks(false);
+$('bResetAll').onclick = () => resetBlanks(true);
 function setLevel(l) { bLevel = l; LS.set('ma_blevel', l); bState = {}; renderBlank(); window.scrollTo(0, 0); }
 document.querySelectorAll('#bLevels .lv').forEach(b => b.onclick = () => setLevel(+b.dataset.lv));
 

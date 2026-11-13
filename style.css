@@ -206,3 +206,6 @@ select,textarea,input,.scard textarea{font-size:16px!important}
 .walk .wq .wgap{display:inline-block;min-width:2.4em;text-align:center;border-bottom:3px solid #facc15;color:#facc15}
 .walk .wq{font-size:28px}
 #cReset{display:block;margin:6px auto 0;background:none;border:1px solid var(--line);color:var(--sub)}
+.bk.was{color:var(--no-fg);box-shadow:inset 0 0 0 1.5px var(--no-line);border-color:var(--no-line)}
+.bin.was{border-color:var(--no-line)!important}
+.breset{justify-content:center;gap:8px;margin:18px 0 4px}
