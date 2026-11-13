@@ -22,6 +22,7 @@
 
 ## 데이터가 쓰이는 곳 (index.html / app.js)
 - 처음 화면: 과목 선택(`subject` 값으로 자동 생성). 영어는 `english.html`, `vocab.html` 링크.
+- `vocab.html`의 '고른 범위 기록 초기화'는 고른 자료·지문 단어의 `store.s`(앎·애매·모름)만 지운다(★·지문 '내용 외움'은 유지).
 - 국어 문법 덱: `korean-grammar.html` (vocab.html과 같은 스타일). 데이터는 `data/korean-grammar.json` (`sections` / `cards[{id, section, front, back, explain}]`), 기록 키 `korean-grammar_progress_v1`. 처음 화면 '국어 문법' 칸에서 링크.
 - 빈칸 탭: `sentence` + `blanks`로 빈칸 추론(탭해서 확인 / 직접 쓰기 / 초성 힌트 / 틀린 것만). 단원·`topic` 순서는 `order`.
   - 단계(난이도): 1 큰 틀(소제목마다 핵심 문장 1~2개, 핵심 빈칸만) → 2 핵심 빈칸(모든 문장) → 3 전체 세부(모든 빈칸). 나머지 빈칸은 글자로 보인다.
