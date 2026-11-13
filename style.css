@@ -205,3 +205,4 @@ select,textarea,input,.scard textarea{font-size:16px!important}
 .walk .wq mark{background:none;color:#facc15;font-weight:800}
 .walk .wq .wgap{display:inline-block;min-width:2.4em;text-align:center;border-bottom:3px solid #facc15;color:#facc15}
 .walk .wq{font-size:28px}
+#cReset{display:block;margin:6px auto 0;background:none;border:1px solid var(--line);color:var(--sub)}

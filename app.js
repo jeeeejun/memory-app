@@ -166,6 +166,16 @@ function answerCard(k) { if (di >= deck.length) return; grade(deck[di].id, k); d
 $('bRight').onclick = () => answerCard(true);
 $('bWrong').onclick = () => answerCard(false);
 $('bMid').onclick = () => answerCard('mid');
+// 기록 초기화: 지금 고른 과목·단원의 카드 기록(알았다·몰랐다·복습 날짜)을 지워 처음부터 다시 나오게 함. ★ 표시는 그대로.
+$('cReset').onclick = () => {
+  const ids = confirmed().filter(c => ($('fSubject').value === '*' || c.subject === $('fSubject').value) && inPart(c, $('fPart').value)).map(c => c.id);
+  const n = ids.filter(id => prog[id] || bWrong[id]).length;
+  const label = $('fPart').selectedOptions[0]?.textContent.replace(/\s*\(\d+\)$/, '') || '이 범위';
+  if (!n) { alert('초기화할 기록이 없어요.'); return; }
+  if (!confirm(`「${label}」 카드 ${n}장의 기록(알았다·몰랐다)을 지울까요?\n모든 카드가 다시 '오늘 복습할 카드'에 나와요.`)) return;
+  ids.forEach(id => { delete prog[id]; delete bWrong[id]; });
+  saveAll(); startDeck(); refreshCommon();
+};
 ['fSubject', 'fScope', 'fShuffle', 'fReverse'].forEach(id => $(id).onchange = startDeck);
 $('fSubject').addEventListener('change', () => { fillPartSelect($('fPart'), 'fSubject'); startDeck(); });
 $('fPart').onchange = () => { LS.set('ma_fPart', $('fPart').value); startDeck(); };
