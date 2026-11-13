@@ -209,3 +209,9 @@ select,textarea,input,.scard textarea{font-size:16px!important}
 .bk.was{color:var(--no-fg);box-shadow:inset 0 0 0 1.5px var(--no-line);border-color:var(--no-line)}
 .bin.was{border-color:var(--no-line)!important}
 .breset{justify-content:center;gap:8px;margin:18px 0 4px}
+/* 빈칸: 답 본 뒤 알았음/몰랐음 고르기 */
+.bjudge{display:inline-flex;gap:4px;margin:0 4px;vertical-align:baseline}
+.bj{border:1px solid var(--line);border-radius:999px;padding:0 9px;font:inherit;font-size:12.5px;line-height:1.9;cursor:pointer;background:var(--surface);touch-action:manipulation}
+.bj.ok{color:var(--ok-fg);border-color:var(--ok-line)}
+.bj.no{color:var(--no-fg);border-color:var(--no-line)}
+.bbar .okc b{color:var(--ok-fg)}.bbar .noc b{color:var(--no-fg)}
