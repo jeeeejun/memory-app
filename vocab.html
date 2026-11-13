@@ -1944,6 +1944,7 @@ in person|직접
         <button class="chip alt" id="fStar" aria-pressed="false">★ 표시만</button>
       </div>
       <div class="count" id="count"></div>
+      <button class="btn ghost" id="resetSel" style="align-self:flex-start">↺ 고른 범위 기록 초기화</button>
       <p class="tip" style="margin:0">여기서 고른 범위가 카드·4지선다·철자·단어장에 똑같이 적용돼요.</p>
     </section>
   </div>
@@ -2097,6 +2098,14 @@ function renderChips() {
 $("fWeak").onclick = () => { weakOnly = !weakOnly; filtersChanged(); };
 $("fStar").onclick = () => { starOnly = !starOnly; filtersChanged(); };
 function filtersChanged() { renderChips(); renderProgress(); resetAll(); }
+// 고른 자료·지문 단어의 앎·애매·모름 기록만 지움 (★ 표시, 지문 '내용 외움'은 그대로)
+$("resetSel").onclick = () => {
+  const list = WORDS.filter(w => (srcSel === "all" || w.src === srcSel) && sel.has(w.p) && store.s[w.id]);
+  if (!list.length) { alert("초기화할 기록이 없어요."); return; }
+  const where = (srcSel === "all" ? "전체 자료" : srcSel) + (allGroups().every(g => sel.has(g)) ? " 전체" : " 고른 지문");
+  if (!confirm(`${where} 단어 ${list.length}개의 기록(앎·애매·모름)을 지울까요?\n모두 '안 봄'으로 돌아가고 카드에 다시 나와요. ★ 표시는 그대로예요.`)) return;
+  list.forEach(w => delete store.s[w.id]); save(); renderChips(); renderProgress(); resetAll();
+};
 function setSource(v, groups) {
   srcSel = v;
   $("srcSeg").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x.dataset.v === v));
