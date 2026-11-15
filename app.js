@@ -88,6 +88,7 @@ function refreshCommon() {
   const sj = curSubject && curSubject !== '*' ? curSubject : '*';
   $('txtTab').classList.toggle('hidden', MANAGE || !baseTxts.some(t => sj === '*' || t.subject === sj)); // 원문이 있는 과목만 원문 탭
   $('srcTab').classList.toggle('hidden', MANAGE || !baseSrcs.some(s => sj === '*' || s.subject === sj)); // 사료가 있는 과목만 사료 탭
+  $('mmTab').classList.toggle('hidden', MANAGE || !baseMaps[sj]); // 마인드맵 뼈대가 있는 과목만 마인드맵 탭
   $('subjTitle').textContent = MANAGE ? '관리 · 검수와 추가' : sj === '*' ? '암기장' : sj;
   $('countInfo').textContent = MANAGE ? `검수대기 ${pend}` : `카드 ${filterCards(sj, 'all').length} · 오늘 복습 ${filterCards(sj, 'due').length}`;
 }
@@ -129,6 +130,7 @@ document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
   if (b.dataset.tab === 'sum') renderSums();
   if (b.dataset.tab === 'src') { srcOrder = null; renderSrc(); }
   if (b.dataset.tab === 'txt') renderTxt();
+  if (b.dataset.tab === 'mm') renderMM();
   if (b.dataset.tab === 'walk') $('wShowA').checked = LS.get('ma_wshowa', null) ?? curSubject === '국어'; // 국어는 기본으로 답을 같이 보여 줌
   refreshCommon();
 });
@@ -761,12 +763,77 @@ function renderTxt() {
 $('txtBox').onclick = e => { const l = e.target.closest('.tline.tap'); if (!l) return; txtOpen[l.dataset.n] = !txtOpen[l.dataset.n]; renderTxt(); };
 ['txtTrans', 'txtNote'].forEach(id => $(id).onchange = () => { txtOpen = {}; renderTxt(); });
 
+/* ===== 마인드맵 ===== */
+// 가지는 카드 데이터에서 자동으로: 과목 → 대단원 → 단원 → 소제목 → 문장 → 해설·확인 문제 (+ 단원별 사료).
+// data/mindmap.json 은 뼈대만: parts = 대단원 제목, flows = 단원별 '한눈에 보는 흐름' 핵심어 (tools/mindmap_history.py)
+let baseMaps = {}, mm = null, mmDepth = LS.get('ma_mmdepth', {});
+function mmTree() {
+  const sj = curSubject, cfg = baseMaps[sj] || {}, flows = cfg.flows || {}, partName = cfg.parts || {};
+  const cards = filterCards(sj, 'all').sort(byOrder);
+  const srcs = baseSrcs.filter(s => s.subject === sj).sort(byOrder);
+  const uniq = a => [...new Set(a)];
+  const leaf = c => {
+    const core = coreBlanks(c);
+    return {
+      id: 'c:' + c.id, cls: 'txt', mark: c.exp ? '💡' : '',
+      html: segments(c).map(x => x.t !== undefined ? esc(x.t) : core.includes(x.b) ? `<mark>${esc(x.b)}</mark>` : `<u>${esc(x.b)}</u>`).join('') || esc(c.sentence || c.q),
+      body: (c.exp ? `<p><span class="mm-k">해설·필기</span>${esc(c.exp)}</p>` : '') + `<p><span class="mm-k">확인</span>${esc(c.q)} <b>→ ${esc(c.a)}</b></p>` + refHtml(c)
+    };
+  };
+  const unitNode = u => {
+    const cs = cards.filter(c => (c.unit || '기타') === u), code = u.split(' ')[0], title = unitTitle(u) || u, flow = flows[code];
+    const topics = uniq(cs.map(c => c.topic || ''));
+    const flat = topics.length === 1 && (!topics[0] || topics[0] === title); // 소제목이 단원 제목과 같으면 한 단계 건너뜀
+    const us = srcs.filter(s => s.unit === u);
+    return {
+      id: 'u:' + u, cls: 'mid', tag: code !== u ? code : '', label: title, count: cs.length,
+      sep: flow ? flow.sep : '→',
+      chain: flow ? flow.items.map(it => { const [t, f] = Array.isArray(it) ? it : [it, it], hit = cs.find(c => (c.sentence || '').includes(f)); return { t, to: hit && 'c:' + hit.id }; })
+        : flat ? [] : topics.map(t => ({ t, to: 't:' + u + '|' + t })),
+      children: flat ? cs.map(leaf) : topics.map(t => {
+        const ts = cs.filter(c => (c.topic || '') === t);
+        return { id: 't:' + u + '|' + t, cls: 'sm', label: t || '기타', count: ts.length, sub: uniq(ts.flatMap(coreBlanks)).slice(0, 7).join(' · '), children: ts.map(leaf) };
+      }),
+      extra: us.length ? [{
+        id: 'sg:' + u, cls: 'sm', label: '사료', count: us.length, sub: us.map(s => s.title).join(' · '),
+        children: us.map(s => ({
+          id: 's:' + s.id, cls: 'txt', label: s.title,
+          body: `<p class="mm-pre">${esc(s.text)}</p>${s.cite ? `<p><span class="mm-k">- ${esc(s.cite)} -</span></p>` : ''}<p><b>→ ${esc(s.a)}</b></p>${s.exp ? `<p>💡 ${esc(s.exp)}</p>` : ''}`
+        }))
+      }] : []
+    };
+  };
+  const units = uniq(cards.map(c => c.unit || '기타'));
+  const children = uniq(units.map(unitPart)).flatMap(p => {
+    const us = units.filter(u => unitPart(u) === p);
+    if (us.length === 1 && !partName[p]) return [Object.assign(unitNode(us[0]), { cls: 'big' })]; // 대단원 제목이 없고 단원이 하나면 바로 단원
+    return [{
+      id: 'p:' + p, cls: 'big', tag: p, label: partName[p] || '', count: cards.filter(c => unitPart(c.unit) === p).length,
+      chain: us.map(u => ({ t: unitTitle(u) || u, to: 'u:' + u })), children: us.map(unitNode)
+    }];
+  });
+  return { id: 'r:' + sj, label: sj, count: `카드 ${cards.length}`, children };
+}
+function mmSyncLevels() { document.querySelectorAll('#mmLevels .lv').forEach(b => b.classList.toggle('on', +b.dataset.d === mmDepth[curSubject])); }
+function renderMM() {
+  if (!baseMaps[curSubject]) { $('mmBox').innerHTML = '<p class="muted center" style="padding:30px 0">이 과목에는 아직 마인드맵이 없어요.</p>'; return; }
+  if (!mm) mm = MindMap($('mmBox'), { onToggle: () => { delete mmDepth[curSubject]; LS.set('ma_mmdepth', mmDepth); mmSyncLevels(); } });
+  if (!LS.get('ma_mm_' + curSubject, null) && !mmDepth[curSubject]) mmDepth[curSubject] = 2; // 처음엔 단원과 흐름까지
+  mm.render(mmTree(), 'ma_mm_' + curSubject, 2);
+  mmSyncLevels();
+}
+document.querySelectorAll('#mmLevels .lv').forEach(b => b.onclick = () => {
+  if (!mm) return;
+  mmDepth[curSubject] = +b.dataset.d; LS.set('ma_mmdepth', mmDepth); mm.expandTo(+b.dataset.d, +b.dataset.d >= 5); mmSyncLevels();
+});
+
 /* ===== 시작 ===== */
 async function init() {
   try { const r = await fetch('data/cards.json', { cache: 'no-cache' }); baseCards = await r.json(); } catch { baseCards = []; }
   try { const r = await fetch('data/summaries.json', { cache: 'no-cache' }); baseSums = await r.json(); } catch { baseSums = []; }
   try { const r = await fetch('data/sources.json', { cache: 'no-cache' }); baseSrcs = await r.json(); } catch { baseSrcs = []; }
   try { const r = await fetch('data/texts.json', { cache: 'no-cache' }); baseTxts = await r.json(); } catch { baseTxts = []; }
+  try { const r = await fetch('data/mindmap.json', { cache: 'no-cache' }); baseMaps = await r.json(); } catch { baseMaps = {}; }
   refreshCommon(); startDeck(true);
   if (MANAGE) { document.body.classList.add('manage'); goTab('review'); return; }
   if (!curSubject || !subjects().includes(curSubject)) showPicker();

@@ -32,7 +32,8 @@
        "answer":"⑤ (C)-(B)-(A)", "why":"정답 근거",
        "structure":[{"tag":"주어진 글","text":"..."}, ...],   ← 글의 흐름 단계
        "summary":"한국어 내용 요약",
-       "sentences":[{"en":"원문 핵심 문장","note":"해석/구문 설명"}, ...],
+       "sentences":[{"en":"원문 핵심 문장","note":"해석/구문 설명","step":0}, ...],
+                     ← step = 이 문장이 속한 structure 단계 번호(0부터). '흐름 맵' 보기에서 그 단계를 펴면 나온다. 없으면 '그 밖의 핵심 문장'으로.
        "notes":["원문에 필기로 추가 학습한 내용", ...] }
      "id":"구문"인 객체는 해석기법(문법) 정리: "points":[{"title","desc","ex":[...],"notes":[...]}]
      JSON이므로 문자열 안에 큰따옴표(")를 쓰려면 \" 로, 또는 “ ” 사용.
@@ -42,6 +43,7 @@
      (0 안 봄, 1 모름, 2 애매, 3 앎)  — 키 이름을 바꾸면 기존 기록이 사라짐.
 =====================================================================
 -->
+<link rel="stylesheet" href="mindmap.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Gowun+Dodum&family=IBM+Plex+Mono:wght@500&display=swap">
@@ -58,11 +60,11 @@
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --paper:#17191e; --card:#1f2228; --ink:#e8e6df; --muted:#9a9ea8; --rule:#2c3038;
   --line:#3a3f49; --gold:#d4ab4c; --red:#e27367; --blue:#7fa6e6; --green:#78b487;
-  --chip:#2a2d34; --hl:#4a4224; --shadow:0 1px 0 rgba(0,0,0,.3),0 6px 18px rgba(0,0,0,.35); color-scheme:dark}}
+  --chip:#2a2d34; --hl:#4a4224; --shadow:0 1px 0 rgba(0,0,0,.3),0 6px 18px rgba(0,0,0,.35); --mm-lum:64%; color-scheme:dark}}
 :root[data-theme="dark"]{
   --paper:#17191e; --card:#1f2228; --ink:#e8e6df; --muted:#9a9ea8; --rule:#2c3038;
   --line:#3a3f49; --gold:#d4ab4c; --red:#e27367; --blue:#7fa6e6; --green:#78b487;
-  --chip:#2a2d34; --hl:#4a4224; --shadow:0 1px 0 rgba(0,0,0,.3),0 6px 18px rgba(0,0,0,.35); color-scheme:dark}
+  --chip:#2a2d34; --hl:#4a4224; --shadow:0 1px 0 rgba(0,0,0,.3),0 6px 18px rgba(0,0,0,.35); --mm-lum:64%; color-scheme:dark}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.55}
@@ -156,6 +158,10 @@ input[type=text],input[type=search]{width:100%;font:inherit;font-size:1.15rem;pa
 .star.on{color:var(--gold)}
 .empty{color:var(--muted);text-align:center;padding:30px 10px}
 .tip{font-size:.85rem;color:var(--muted)}
+/* 흐름 맵 (mindmap.css 색을 이 페이지 색에 맞춤) */
+.mm{--mm-bg:var(--card);--mm-text:var(--ink);--mm-muted:var(--muted);--mm-neu:var(--line);--mm-soft:var(--chip);--mm-mark:var(--red);--mm-root-bg:var(--ink);--mm-root-fg:var(--paper)}
+.mm .mm-en{font-family:var(--serif)}
+.mapbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 /* study sheet */
 .sheet{background:var(--card);border-radius:8px;box-shadow:var(--shadow);padding:22px 20px;display:flex;flex-direction:column;gap:20px;min-width:0}
 .sheet h2{font-family:var(--serif);font-size:1.35rem;margin:0;line-height:1.35;text-wrap:balance;word-break:keep-all}
@@ -913,27 +919,33 @@ in person|직접
   "sentences": [
    {
     "en": "People sometimes worry that a bank will run out of money, so they all panic and try to withdraw their money.",
-    "note": "run out of 다 떨어지다 / worry that절(목적어)"
+    "note": "run out of 다 떨어지다 / worry that절(목적어)",
+    "step": 0
    },
    {
     "en": "In some cases, it can cause a bank to go bankrupt.",
-    "note": "cause + O + to V: O가 ~하게 만들다"
+    "note": "cause + O + to V: O가 ~하게 만들다",
+    "step": 0
    },
    {
     "en": "The bank must find a way to increase the amount of cash (that) they have on hand.",
-    "note": "cash 뒤 '주어+동사'(they have) → 목적격 관계대명사 생략 [해석기법 25]"
+    "note": "cash 뒤 '주어+동사'(they have) → 목적격 관계대명사 생략 [해석기법 25]",
+    "step": 2
    },
    {
     "en": "One way that they can do this is by selling their assets.",
-    "note": "주어 One way + 관계사절, 동사 is / by -ing 방법"
+    "note": "주어 One way + 관계사절, 동사 is / by -ing 방법",
+    "step": 2
    },
    {
     "en": "This can cause even more customer anxiety, leading to increased withdrawals.",
-    "note": "leading to ~ : 결과의 분사구문 (그래서 ~로 이어진다)"
+    "note": "leading to ~ : 결과의 분사구문 (그래서 ~로 이어진다)",
+    "step": 3
    },
    {
     "en": "The amount is only a small percentage of the total deposits made by customers.",
-    "note": "made by ~ : 과거분사 후치수식 (고객이 맡긴 예금)"
+    "note": "made by ~ : 과거분사 후치수식 (고객이 맡긴 예금)",
+    "step": 1
    }
   ],
   "notes": [
@@ -973,19 +985,23 @@ in person|직접
   "sentences": [
    {
     "en": "Healthcare workers have been dressing up like clowns to help patients relax and reduce the stress staying in the hospital can cause.",
-    "note": "help + O + 원형(relax) / the stress (that) staying in the hospital can cause: 목적격 관계대명사 생략, 관계사절의 주어는 동명사 staying"
+    "note": "help + O + 원형(relax) / the stress (that) staying in the hospital can cause: 목적격 관계대명사 생략, 관계사절의 주어는 동명사 staying",
+    "step": 0
    },
    {
     "en": "Evidence suggests (that) the laughter (that) these medical clowns create is as effective as some medication.",
-    "note": "suggest = 시사하다·보여 주다(제안하다 X) / laughter 뒤 목적격 관계대명사 생략 / as 원급 as"
+    "note": "suggest = 시사하다·보여 주다(제안하다 X) / laughter 뒤 목적격 관계대명사 생략 / as 원급 as",
+    "step": 1
    },
    {
     "en": "The kids who met with clowns showed the same reduction in anxiety as those who were given the sedative.",
-    "note": "주어 The kids + who절, 동사 showed / the same ~ as… / those = the kids"
+    "note": "주어 The kids + who절, 동사 showed / the same ~ as… / those = the kids",
+    "step": 2
    },
    {
     "en": "It is believed that medical clowns could also be used to help kids with autism and young burn victims in need of painful bandage-changing.",
-    "note": "It is believed that ~: ~라고 여겨진다"
+    "note": "It is believed that ~: ~라고 여겨진다",
+    "step": 3
    }
   ],
   "notes": [
@@ -1033,19 +1049,23 @@ in person|직접
   "sentences": [
    {
     "en": "In the 1950s, biologists observed chimpanzees that weren't biologically related sharing meat.",
-    "note": "observe + O + V-ing(지각동사) / O = chimpanzees that weren't biologically related"
+    "note": "observe + O + V-ing(지각동사) / O = chimpanzees that weren't biologically related",
+    "step": 0
    },
    {
     "en": "Each program had a specific strategy that it followed when encountering an opponent.",
-    "note": "목적격 that / when + V-ing: 접속사를 남긴 분사구문"
+    "note": "목적격 that / when + V-ing: 접속사를 남긴 분사구문",
+    "step": 2
    },
    {
     "en": "A strategy emerged over time that was more successful than others.",
-    "note": "술어부(emerged over time)가 짧아서 관계사절보다 앞에 옴 [해석기법 26]"
+    "note": "술어부(emerged over time)가 짧아서 관계사절보다 앞에 옴 [해석기법 26]",
+    "step": 3
    },
    {
     "en": "The behavior we observe in the animal kingdom that is similar to this is called reciprocity.",
-    "note": "선행사 The behavior에 관계사절 두 개: (that) we observe… + that is similar to this / 동사 is called [해석기법 26]"
+    "note": "선행사 The behavior에 관계사절 두 개: (that) we observe… + that is similar to this / 동사 is called [해석기법 26]",
+    "step": 4
    }
   ],
   "notes": [
@@ -1093,19 +1113,23 @@ in person|직접
   "sentences": [
    {
     "en": "Baarle is a small border village where areas of Belgian land are scattered within the surrounding Dutch territory.",
-    "note": "관계부사 where (선행사 village) / scattered 흩어져 있는"
+    "note": "관계부사 where (선행사 village) / scattered 흩어져 있는",
+    "step": 0
    },
    {
     "en": "There are some Belgian areas within the Dutch territory that contain smaller Dutch properties.",
-    "note": "that의 선행사는 바로 앞 territory가 아니라 some Belgian areas → 동사 contain(복수) [해석기법 26]"
+    "note": "that의 선행사는 바로 앞 territory가 아니라 some Belgian areas → 동사 contain(복수) [해석기법 26]",
+    "step": 1
    },
    {
     "en": "It is one of only a few places in the world that have such a complicated border.",
-    "note": "that의 선행사 places → have(복수)"
+    "note": "that의 선행사 places → have(복수)",
+    "step": 1
    },
    {
     "en": "So if the Dutch annoyed you last week, all you have to do is move your front door to relocate to Belgium.",
-    "note": "All (that) you have to do is (to) V: 너는 ~하기만 하면 된다 (A = B, is 뒤 to 생략 가능)"
+    "note": "All (that) you have to do is (to) V: 너는 ~하기만 하면 된다 (A = B, is 뒤 to 생략 가능)",
+    "step": 5
    }
   ],
   "notes": [
@@ -1145,23 +1169,28 @@ in person|직접
   "sentences": [
    {
     "en": "One of the most important events of this movement was the moment when some African American college students sat in a segregated section of a restaurant.",
-    "note": "one of + 복수명사 + 단수동사(was) / 관계부사 when"
+    "note": "one of + 복수명사 + 단수동사(was) / 관계부사 when",
+    "step": 1
    },
    {
     "en": "They were told to leave, but they protested by remaining in their seats.",
-    "note": "by -ing: 수단·방법"
+    "note": "by -ing: 수단·방법",
+    "step": 1
    },
    {
     "en": "Protesters occupied seats in places where races were segregated, including restaurants and libraries.",
-    "note": "관계부사 where / including ~을 포함하여"
+    "note": "관계부사 where / including ~을 포함하여",
+    "step": 2
    },
    {
     "en": "Many establishments decided to end their practice of racial segregation rather than deal with more protests.",
-    "note": "A rather than B: B보다는 A (to end와 (to) deal 병렬)"
+    "note": "A rather than B: B보다는 A (to end와 (to) deal 병렬)",
+    "step": 3
    },
    {
     "en": "These sit-ins helped pass the Civil Rights Act of 1964, which officially ended segregation in public places.",
-    "note": "help + 원형 / 계속적 용법 which = 그리고 그 법은 [해석기법 28]"
+    "note": "help + 원형 / 계속적 용법 which = 그리고 그 법은 [해석기법 28]",
+    "step": 3
    }
   ],
   "notes": [
@@ -1205,19 +1234,23 @@ in person|직접
   "sentences": [
    {
     "en": "This stress, in turn, leads to further trouble sleeping.",
-    "note": "in turn: 결국, 이번엔 / trouble (in) -ing: ~하는 데 어려움"
+    "note": "in turn: 결국, 이번엔 / trouble (in) -ing: ~하는 데 어려움",
+    "step": 0
    },
    {
     "en": "While many patients feel medication is the only remedy for their problem, doctors disagree.",
-    "note": "While = ~이지만(대조) / feel (that) ~"
+    "note": "While = ~이지만(대조) / feel (that) ~",
+    "step": 1
    },
    {
     "en": "This condition can be treated with cognitive behavioral therapy, which focuses on changing the way these people think about insomnia, thereby enabling a change in behavior.",
-    "note": "계속적 which / the way + 주어 + 동사 (how와 함께 쓰지 않음, 해석기법 27) / S+V+O, thereby V-ing: 그렇게 함으로써 ~하다"
+    "note": "계속적 which / the way + 주어 + 동사 (how와 함께 쓰지 않음, 해석기법 27) / S+V+O, thereby V-ing: 그렇게 함으로써 ~하다",
+    "step": 3
    },
    {
     "en": "The therapy involves showing patients that they can still be healthy even if they fail to get a good night's sleep once in a while.",
-    "note": "show + I.O + that절 / even if 비록 ~일지라도 / once in a while 가끔"
+    "note": "show + I.O + that절 / even if 비록 ~일지라도 / once in a while 가끔",
+    "step": 4
    }
   ],
   "notes": [
@@ -1261,19 +1294,23 @@ in person|직접
   "sentences": [
    {
     "en": "She showed an interest in mechanics at an early age, often taking apart appliances and putting them back together.",
-    "note": "동시동작·부연의 분사구문 (taking … and putting …)"
+    "note": "동시동작·부연의 분사구문 (taking … and putting …)",
+    "step": 0
    },
    {
     "en": "Following the attack on Pearl Harbor in 1941, which caused the US to enter World War II, Hopper joined the military.",
-    "note": "Following = ~ 후에 / 계속적 which의 선행사 = the attack on Pearl Harbor / cause O to V"
+    "note": "Following = ~ 후에 / 계속적 which의 선행사 = the attack on Pearl Harbor / cause O to V",
+    "step": 2
    },
    {
     "en": "After the war, she took part in the creation of UNIVAC, the first all-electronic digital computer.",
-    "note": "콤마 뒤 동격 (UNIVAC = 최초의 완전 전자식 디지털 컴퓨터)"
+    "note": "콤마 뒤 동격 (UNIVAC = 최초의 완전 전자식 디지털 컴퓨터)",
+    "step": 3
    },
    {
     "en": "In 1973, she became the first woman to be named a distinguished fellow of the British Computer Society.",
-    "note": "the first + 명사 + to V: ~한 최초의 / be named + 명사: ~로 임명되다"
+    "note": "the first + 명사 + to V: ~한 최초의 / be named + 명사: ~로 임명되다",
+    "step": 4
    }
   ],
   "notes": [
@@ -1316,15 +1353,18 @@ in person|직접
   "sentences": [
    {
     "en": "Mount Vesuvius is a volcano in Italy that had been inactive for hundreds of years until August 24, 79 A.D., when it suddenly erupted.",
-    "note": "주격 that + had been(대과거) / 계속적 when = 그리고 그때 [해석기법 28]"
+    "note": "주격 that + had been(대과거) / 계속적 when = 그리고 그때 [해석기법 28]",
+    "step": 0
    },
    {
     "en": "The next morning a cloud of toxic gas reached Pompeii, where around 20,000 people lived.",
-    "note": "본동사 reached 필요 (어법 정답) / 계속적 where = 그리고 그곳에"
+    "note": "본동사 reached 필요 (어법 정답) / 계속적 where = 그리고 그곳에",
+    "step": 3
    },
    {
     "en": "Most of the people who did not leave at the start of the eruption were buried alive in rock and ash.",
-    "note": "Most of + 복수명사 → 복수동사 were / buried alive 산 채로 묻힌"
+    "note": "Most of + 복수명사 → 복수동사 were / buried alive 산 채로 묻힌",
+    "step": 4
    }
   ],
   "notes": [
@@ -1363,27 +1403,33 @@ in person|직접
   "sentences": [
    {
     "en": "Fiona waited outside the theater, looking at the closed doors.",
-    "note": "동시동작 분사구문 (~하면서)"
+    "note": "동시동작 분사구문 (~하면서)",
+    "step": 0
    },
    {
     "en": "Walking in, Fiona relaxed a bit, trying to make herself feel brave.",
-    "note": "Walking in = As she walked in(시간) / trying ~ 동시동작 / make O 원형"
+    "note": "Walking in = As she walked in(시간) / trying ~ 동시동작 / make O 원형",
+    "step": 1
    },
    {
     "en": "Standing on the stage and saying her lines, she began to feel sure of herself again.",
-    "note": "분사구문 두 개 병렬 / feel sure of oneself 자신감을 느끼다"
+    "note": "분사구문 두 개 병렬 / feel sure of oneself 자신감을 느끼다",
+    "step": 2
    },
    {
     "en": "Not only did she recite every line perfectly, but she also delivered them with immense passion.",
-    "note": "부정어 Not only 문두 → 조동사 도치(did she recite)"
+    "note": "부정어 Not only 문두 → 조동사 도치(did she recite)",
+    "step": 2
    },
    {
     "en": "Coming off the stage, she couldn't help but smile.",
-    "note": "can't help but + 원형: ~하지 않을 수 없다"
+    "note": "can't help but + 원형: ~하지 않을 수 없다",
+    "step": 3
    },
    {
     "en": "“I did it,” she thought, surprised at how the audition had gone.",
-    "note": "surprised: 과거분사 분사구문(감정) / how 뒤에 (well)이 생략된 느낌으로 해석: 오디션이 얼마나 잘됐는지 / had gone 대과거"
+    "note": "surprised: 과거분사 분사구문(감정) / how 뒤에 (well)이 생략된 느낌으로 해석: 오디션이 얼마나 잘됐는지 / had gone 대과거",
+    "step": 3
    }
   ],
   "notes": [
@@ -1427,23 +1473,28 @@ in person|직접
   "sentences": [
    {
     "en": "Unfortunately, making printed books means cutting down trees.",
-    "note": "동명사 주어 / mean -ing: ~을 의미하다"
+    "note": "동명사 주어 / mean -ing: ~을 의미하다",
+    "step": 0
    },
    {
     "en": "Made from acid-free paper and with non-toxic ink, the entire book is environment-friendly.",
-    "note": "(Being) Made ~: 과거분사 분사구문(이유) [해석기법 31]"
+    "note": "(Being) Made ~: 과거분사 분사구문(이유) [해석기법 31]",
+    "step": 2
    },
    {
     "en": "Seeds are also sewn into the book's pages, so it can be transformed into a tree.",
-    "note": "sew-sewed-sewn / be transformed into ~으로 바뀌다"
+    "note": "sew-sewed-sewn / be transformed into ~으로 바뀌다",
+    "step": 2
    },
    {
     "en": "Placing the book in the dirt when the seeds begin to sprout, children can grow it like any other plant.",
-    "note": "Placing ~ = 분사구문(시간·방법) / 원문 ④ abandon이 오답"
+    "note": "Placing ~ = 분사구문(시간·방법) / 원문 ④ abandon이 오답",
+    "step": 3
    },
    {
     "en": "The publisher hopes it will make people aware of the resources needed to produce everyday items such as books.",
-    "note": "make O C(형용사 aware) / needed 과거분사 후치수식"
+    "note": "make O C(형용사 aware) / needed 과거분사 후치수식",
+    "step": 4
    }
   ],
   "notes": [
@@ -1490,23 +1541,28 @@ in person|직접
   "sentences": [
    {
     "en": "Tree transplant shock is a condition that occurs when a tree undergoes stress or trauma after being moved to a new location.",
-    "note": "주격 that / after being p.p.(수동 동명사)"
+    "note": "주격 that / after being p.p.(수동 동명사)",
+    "step": 0
    },
    {
     "en": "Symptoms of tree transplant shock include slower growth, which can potentially lead to death.",
-    "note": "계속적 which (선행사 slower growth)"
+    "note": "계속적 which (선행사 slower growth)",
+    "step": 1
    },
    {
     "en": "Removed from its original location, a young tree can be expected to retain only about 15% of its root system.",
-    "note": "(Being) Removed: 과거분사 분사구문 [해석기법 31]"
+    "note": "(Being) Removed: 과거분사 분사구문 [해석기법 31]",
+    "step": 2
    },
    {
     "en": "Better suited to deal with the local climate and soils, these trees will develop new roots more quickly.",
-    "note": "(Being) Better suited: 이유 / be suited to V ~하기에 적합하다"
+    "note": "(Being) Better suited: 이유 / be suited to V ~하기에 적합하다",
+    "step": 4
    },
    {
     "en": "Once successfully transplanted, the tree will require regular watering until it has become firmly established in its new location.",
-    "note": "접속사 Once를 남긴 분사구문 [해석기법 32] / establish 정착시키다"
+    "note": "접속사 Once를 남긴 분사구문 [해석기법 32] / establish 정착시키다",
+    "step": 5
    }
   ],
   "notes": [
@@ -1549,15 +1605,18 @@ in person|직접
   "sentences": [
    {
     "en": "They took turns playing the role of a dentist, even putting on a mask and gloves.",
-    "note": "take turns -ing: 번갈아 ~하다 / putting on ~ 부연 분사구문"
+    "note": "take turns -ing: 번갈아 ~하다 / putting on ~ 부연 분사구문",
+    "step": 3
    },
    {
     "en": "Having completed the experience, each student received a gift bag filled with useful items for keeping their teeth clean and healthy.",
-    "note": "Having p.p.: 완료 분사구문(체험을 마친 후) / filled with 후치수식 / keep O C"
+    "note": "Having p.p.: 완료 분사구문(체험을 마친 후) / filled with 후치수식 / keep O C",
+    "step": 4
    },
    {
     "en": "Encouraged by the visiting dentist to practice proper dental care at home, they are all likely to take better care of their teeth than ever before.",
-    "note": "(Being) Encouraged: 수동 분사구문 / encourage O to V / be likely to V"
+    "note": "(Being) Encouraged: 수동 분사구문 / encourage O to V / be likely to V",
+    "step": 4
    }
   ],
   "notes": [
@@ -1600,15 +1659,18 @@ in person|직접
   "sentences": [
    {
     "en": "Being African American, Pollard wasn't accepted by his teammates at first.",
-    "note": "Being ~: 이유 분사구문 (흑인이었기 때문에)"
+    "note": "Being ~: 이유 분사구문 (흑인이었기 때문에)",
+    "step": 1
    },
    {
     "en": "He continued to coach and play until 1926.",
-    "note": "1926년까지만 겸업 → 이후는 선수 X"
+    "note": "1926년까지만 겸업 → 이후는 선수 X",
+    "step": 3
    },
    {
     "en": "His playing days being behind him, Pollard then organized and began coaching the Chicago Black Hawks, an all-African American professional football team, in 1928.",
-    "note": "독립분사구문: 의미상 주어 His playing days ≠ 주절 주어 [해석기법 32] / be behind ~: 지나간"
+    "note": "독립분사구문: 의미상 주어 His playing days ≠ 주절 주어 [해석기법 32] / be behind ~: 지나간",
+    "step": 4
    }
   ],
   "notes": [
@@ -1651,23 +1713,28 @@ in person|직접
   "sentences": [
    {
     "en": "He might have just received some terrible news that has seriously affected his mood.",
-    "note": "might have p.p. 과거 추측 / news는 단수 → has"
+    "note": "might have p.p. 과거 추측 / news는 단수 → has",
+    "step": 1
    },
    {
     "en": "It is quite common to blame someone's personality without considering situational factors that may have contributed to his or her actions.",
-    "note": "가주어 It – 진주어 to blame / without -ing"
+    "note": "가주어 It – 진주어 to blame / without -ing",
+    "step": 2
    },
    {
     "en": "What is especially interesting is that, while we often do this to other people, we rarely do it to ourselves.",
-    "note": "What절 주어 / 감정 유발 → interesting"
+    "note": "What절 주어 / 감정 유발 → interesting",
+    "step": 3
    },
    {
     "en": "When looking at our own actions, we always believe that we have good reasons for the things we do.",
-    "note": "접속사 When을 남긴 분사구문 [해석기법 32]"
+    "note": "접속사 When을 남긴 분사구문 [해석기법 32]",
+    "step": 4
    },
    {
     "en": "We are quick to judge others negatively while ignoring possible contributing factors.",
-    "note": "while -ing / negatively는 judge 수식 부사"
+    "note": "while -ing / negatively는 judge 수식 부사",
+    "step": 4
    }
   ],
   "notes": [
@@ -1718,19 +1785,23 @@ in person|직접
   "sentences": [
    {
     "en": "Young children write with all their attention focused on each letter.",
-    "note": "with + O + p.p. (주의가 집중된 채로) [해석기법 33]"
+    "note": "with + O + p.p. (주의가 집중된 채로) [해석기법 33]",
+    "step": 0
    },
    {
     "en": "This is because early humans needed to be able to recognize a dangerous predator, such as a tiger, from any angle.",
-    "note": "This is because ~: 이것은 ~ 때문이다(원인)"
+    "note": "This is because ~: 이것은 ~ 때문이다(원인)",
+    "step": 3
    },
    {
     "en": "Like most predators, a tiger's eyes are directed forward, allowing it to easily track prey.",
-    "note": "allowing ~: 결과 분사구문 (무관 문장 ③)"
+    "note": "allowing ~: 결과 분사구문 (무관 문장 ③)",
+    "step": 4
    },
    {
     "en": "It is believed that mirror generalization, combined with a child's weak understanding of right and left, is what causes the occasional backward letter.",
-    "note": "combined with ~: 삽입된 과거분사구 / what = ~하는 것"
+    "note": "combined with ~: 삽입된 과거분사구 / what = ~하는 것",
+    "step": 6
    }
   ],
   "notes": [
@@ -1777,19 +1848,23 @@ in person|직접
   "sentences": [
    {
     "en": "With predators hiding around every corner, it's not easy for many animals to survive in the wild.",
-    "note": "with + O + V-ing (능동) [해석기법 33]"
+    "note": "with + O + V-ing (능동) [해석기법 33]",
+    "step": 0
    },
    {
     "en": "It mimics a snake to scare away birds, which like to eat the caterpillars but are preyed upon by snakes.",
-    "note": "계속적 which (선행사 birds) / be preyed upon by ~에게 잡아먹히다"
+    "note": "계속적 which (선행사 birds) / be preyed upon by ~에게 잡아먹히다",
+    "step": 2
    },
    {
     "en": "When it does this, eye-shaped markings on its head get bigger, making the caterpillar look like a snake with large eyes.",
-    "note": "making ~: 결과 분사구문 / make O 원형"
+    "note": "making ~: 결과 분사구문 / make O 원형",
+    "step": 3
    },
    {
     "en": "With the caterpillar's camouflage giving it a frightening appearance like that of a predator, the birds stay away.",
-    "note": "with + O + V-ing / that = the appearance (주어진 문장)"
+    "note": "with + O + V-ing / that = the appearance (주어진 문장)",
+    "step": 4
    }
   ],
   "notes": [
@@ -2016,13 +2091,29 @@ in person|직접
       <div class="chips" id="schips"></div>
     </div>
     <div class="row">
+      <div class="seg" id="studyView">
+        <button aria-pressed="true" data-v="sheet">정리 보기</button>
+        <button aria-pressed="false" data-v="map">흐름 맵</button>
+      </div>
+    </div>
+    <div class="row" id="sheetTools">
       <button class="chip alt" id="recallBtn" aria-pressed="false">외우기 모드 (가리기)</button>
       <span class="tip">외우기 모드에선 흐름·요약·필기가 가려져요. 먼저 떠올려 본 뒤 눌러서 확인하세요.</span>
+    </div>
+    <div id="mapTools" hidden>
+      <div class="mapbar">
+        <span class="label">한꺼번에 펴기</span>
+        <button class="chip" data-d="1">뼈대만</button>
+        <button class="chip" data-d="2">내용까지</button>
+        <button class="chip" data-d="3">구문까지</button>
+      </div>
+      <p class="tip" style="margin:8px 0 0">글의 흐름을 단계 이름만 보고 먼저 떠올려 보세요. 단계를 누르면 내용과 그 부분의 영어 문장이, 문장을 누르면 해석·구문 설명이 나와요.</p>
     </div>
     <div id="studyArea"></div>
   </section>
 </div>
 
+<script src="mindmap.js"></script>
 <script>
 /* ---------- data ---------- */
 const WORDS = [], SOURCES = [];
@@ -2362,6 +2453,40 @@ function renderStudyChips() {
   });
 }
 $("recallBtn").onclick = () => { recall = !recall; $("recallBtn").setAttribute("aria-pressed", recall); renderStudy(); };
+/* 흐름 맵: 지문 하나를 마인드맵처럼 — 흐름 단계(뼈대) → 내용·그 부분 영어 문장 → 해석·구문. 열림 상태는 지문마다 기기에 저장 */
+const VIEW_KEY = "vocab_study_view";
+let studyViewV = "sheet"; try { studyViewV = localStorage.getItem(VIEW_KEY) === "map" ? "map" : "sheet"; } catch (e) {}
+$("studyView").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b.dataset.v === studyViewV));
+seg("studyView", v => { studyViewV = v; try { localStorage.setItem(VIEW_KEY, v); } catch (e) {} renderStudy(); });
+let pmap = null;
+function passageTree(p) {
+  const para = t => `<p>${esc(t)}</p>`;
+  if (p.id === "구문") return {
+    id: "r", tag: p.chapter || "", label: p.topic || "해석기법 정리",
+    children: (p.points || []).map((g, i) => ({
+      id: "g" + i, cls: "mid", label: g.title, body: para(g.desc),
+      children: (g.ex || []).map((x, k) => ({ id: `g${i}e${k}`, cls: "txt", html: `<span class="mm-en">${esc(x)}</span>` })),
+      extra: (g.notes || []).map((n, k) => ({ id: `g${i}n${k}`, cls: "txt", label: n }))
+    }))
+  };
+  const sents = p.sentences || [], steps = p.structure || [];
+  const sent = (s, k) => ({ id: "e" + k, cls: "txt", html: `<span class="mm-en">${esc(s.en)}</span>`, body: s.note ? para(s.note) : "" });
+  const rest = sents.map((s, k) => [s, k]).filter(([s]) => !(s.step >= 0 && s.step < steps.length));
+  return {
+    id: "r", tag: `${p.id} · ${p.type}`, label: p.topic, seq: true,
+    children: steps.map((s, i) => {
+      const mine = sents.map((x, k) => [x, k]).filter(([x]) => x.step === i);
+      return { id: "s" + i, cls: "mid", label: s.tag, count: mine.length ? `문장 ${mine.length}` : "", body: para(s.text), children: mine.map(([x, k]) => sent(x, k)) };
+    }),
+    extra: [
+      p.summary ? { id: "sum", cls: "sm", label: "내용 요약", body: para(p.summary) } : null,
+      rest.length ? { id: "rest", cls: "sm", label: "그 밖의 핵심 문장", count: rest.length, children: rest.map(([x, k]) => sent(x, k)) } : null,
+      (p.notes || []).length ? { id: "notes", cls: "sm", label: "원문 필기 · 추가 학습", count: p.notes.length, children: p.notes.map((n, k) => ({ id: "n" + k, cls: "txt", label: n })) } : null,
+      p.answer ? { id: "ans", cls: "sm", label: "문제 정답 · 근거", body: `<p><b>정답 ${esc(p.answer)}</b></p>${para(p.why || "")}` } : null
+    ].filter(Boolean)
+  };
+}
+$("mapTools").querySelectorAll("[data-d]").forEach(b => b.onclick = () => { if (pmap) pmap.expandTo(+b.dataset.d, +b.dataset.d >= 3); });
 function rv(html, tag = "span", cls = "") { return `<${tag} class="rv ${cls}">${html}</${tag}>`; }
 function renderStudy() {
   renderStudyChips();
@@ -2372,7 +2497,19 @@ function renderStudy() {
       <button class="btn ghost" id="pPrev" ${idx <= 0 ? "disabled" : ""}>← 이전</button>
       <button class="btn ghost" id="pNext" ${idx >= PASSAGES.length - 1 ? "disabled" : ""}>다음 →</button></div>`;
   let body;
-  if (p.id === "구문") {
+  const mapView = studyViewV === "map";
+  $("sheetTools").hidden = mapView; $("mapTools").hidden = !mapView;
+  if (mapView) {
+    const nWords = WORDS.filter(w => w.p === p.id).length;
+    body = `<article class="sheet">
+      <div class="kicker">${p.id === "구문" ? esc(p.chapter || "") : `빠바 ${esc(p.chapter)} · ${esc(p.page)}`}</div>
+      <div id="mapArea"></div>
+      ${p.id === "구문" ? "" : `<div class="row">
+        ${nWords ? `<button class="btn" id="goWords">이 지문 단어 ${nWords}개 카드로 외우기</button>` : ""}
+        <button class="chip alt" id="doneBtn" aria-pressed="${!!store.done[p.id]}">${store.done[p.id] ? "✓ 내용 외움" : "내용 외움 표시"}</button>
+      </div>`}
+    </article>`;
+  } else if (p.id === "구문") {
     body = `<article class="sheet ${recall ? "recall" : ""}">
       <div><div class="kicker">${esc(p.chapter || "")}</div><h2>${esc(p.topic || "해석기법 정리")}</h2></div>
       ${(p.points || []).map(g => `<div class="gp">
@@ -2416,6 +2553,7 @@ function renderStudy() {
     </article>`;
   }
   area.innerHTML = body + nav;
+  if (mapView) { pmap = MindMap($("mapArea")); pmap.render(passageTree(p), "vocab_mm_" + p.id, 1); }
   area.querySelectorAll(".rv").forEach(el => el.addEventListener("click", () => el.classList.add("shown")));
   $("pPrev").onclick = () => { curP = PASSAGES[idx - 1].id; renderStudy(); window.scrollTo({ top: 0 }); };
   $("pNext").onclick = () => { curP = PASSAGES[idx + 1].id; renderStudy(); window.scrollTo({ top: 0 }); };
