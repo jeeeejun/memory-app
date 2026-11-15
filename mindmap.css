@@ -1,0 +1,60 @@
+/* 마인드맵 (mindmap.js). 색은 쓰는 쪽에서 .mm 에 --mm-* 변수를 맞춰 준다 (style.css / vocab.html). */
+.mm,.mm ul{list-style:none;margin:0;padding:0}
+:where(.mm){--mm-bg:#fff;--mm-text:#1a2133;--mm-muted:#687389;--mm-neu:#cfd5e2;--mm-soft:#eef1f7;--mm-mark:#4f46e5;--mm-root-bg:#1a2133;--mm-root-fg:#fff}
+.mm{--mmh:221;color:var(--mm-text);font-size:15px;line-height:1.45;padding:2px 0 8px}
+.mm-n{position:relative;--mmc:hsl(var(--mmh) 62% var(--mm-lum,46%))}
+.mm-ch.neu .mm-n{--mmc:var(--mm-muted)}
+
+/* 가지 선: 부모에서 내려오는 줄기 + 둥글게 꺾이는 가지 */
+.mm .mm-ch{margin-left:11px;padding-left:15px}
+.mm .mm-ch>li{position:relative;padding-top:8px}
+.mm-ch>.mm-n::before{content:"";position:absolute;left:-15px;top:0;width:13px;height:27px;border:solid var(--mmc);border-width:0 0 2px 2px;border-bottom-left-radius:11px}
+.mm-ch>li:not(:last-child)::after{content:"";position:absolute;left:-15px;top:0;bottom:0;border-left:2px solid var(--mmc)}
+.mm-n.mm-root>.mm-ch>.mm-n::before,.mm-n.mm-root>.mm-ch>li::after{border-color:var(--mm-neu)}
+/* 순서 있는 단계: 번호 + 줄기 위 화살표 */
+.mm-ch.seq{counter-reset:mmstep}
+.mm-ch.seq>.mm-n{counter-increment:mmstep}
+.mm-ch.seq>.mm-n>.mm-b::before{content:counter(mmstep);flex:none;align-self:center;display:inline-grid;place-items:center;width:1.5em;height:1.5em;border-radius:50%;background:var(--mmc);color:#fff;font-size:.78em;font-weight:800}
+.mm .mm-ch>.mm-arr{padding:0;height:12px}
+.mm-arr::before{content:"";position:absolute;left:-19px;top:5px;border:5px solid transparent;border-top:7px solid var(--mm-muted);border-bottom:0}
+
+/* 가지(노드) */
+.mm-b{display:inline-flex;align-items:baseline;gap:6px;max-width:100%;text-align:left;font:inherit;color:inherit;margin:0;
+  border:1.5px solid var(--mmc);background:var(--mm-bg);border-radius:12px;padding:7px 11px;word-break:keep-all;overflow-wrap:anywhere;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+button.mm-b{cursor:pointer}
+.mm-l{min-width:0}
+.mm-tag{flex:none;color:var(--mmc);font-weight:800;font-size:.86em;white-space:nowrap}
+.mm-ct{flex:none;color:var(--mm-muted);font-size:.78em;font-variant-numeric:tabular-nums}
+.mm-mk{flex:none;font-size:.8em}
+.mm-cv{flex:none;margin-left:auto;padding-left:4px;color:var(--mmc);font-weight:800}
+.mm-cv::after{content:"+"}
+.mm-open>.mm-b .mm-cv::after{content:"−"}
+.mm-root>.mm-b{flex-wrap:wrap;gap:2px 8px;background:var(--mm-root-bg);color:var(--mm-root-fg);border-color:transparent;font-size:17px;font-weight:800;border-radius:14px;padding:9px 15px}
+.mm-root>.mm-b .mm-tag,.mm-root>.mm-b .mm-ct{color:inherit;opacity:.75;font-weight:700}
+.mm-big>.mm-b{font-size:16px;font-weight:800;border-width:2px;padding:8px 12px}
+.mm-mid>.mm-b{font-weight:700}
+.mm-sm>.mm-b{font-size:14.5px;font-weight:600;border-width:1px;border-radius:10px;padding:6px 10px}
+.mm-txt>.mm-b{font-size:14.5px;line-height:1.6;border:0;border-left:3px solid var(--mmc);border-radius:4px 10px 10px 4px;background:var(--mm-soft);padding:7px 10px}
+@supports (background:color-mix(in srgb,red 10%,blue)){
+  .mm-big>.mm-b{background:color-mix(in srgb,var(--mmc) 16%,var(--mm-bg))}
+  .mm-mid>.mm-b{background:color-mix(in srgb,var(--mmc) 8%,var(--mm-bg))}
+  .mm-open.mm-big>.mm-b,.mm-open.mm-mid>.mm-b,.mm-open.mm-sm>.mm-b{box-shadow:0 0 0 3px color-mix(in srgb,var(--mmc) 22%,transparent)}
+}
+.mm-l mark{background:none;color:var(--mm-mark);font-weight:800}
+.mm-l u{text-decoration:underline dotted;text-underline-offset:3px}
+
+/* 접혀 있을 때 한 줄 미리 보기 / 폈을 때 흐름 칩·설명 */
+.mm-sub{margin:4px 0 0 4px;color:var(--mm-muted);font-size:12.5px;line-height:1.55;word-break:keep-all}
+.mm-chain{display:flex;flex-wrap:wrap;align-items:center;gap:4px 3px;margin:7px 0 2px 2px}
+.mm-chain i{font-style:normal;color:var(--mm-muted);font-size:12px;margin-left:3px}
+.mm-lk{display:inline-flex;align-items:center;max-width:100%}
+.mm-chip{font:inherit;font-size:12.5px;font-weight:600;line-height:1.5;color:var(--mm-text);background:var(--mm-bg);border:1px solid var(--mmc);border-radius:999px;padding:2px 9px;margin:0;word-break:keep-all;touch-action:manipulation}
+button.mm-chip{cursor:pointer}
+.mm-body{margin:6px 0 0 2px;padding:9px 12px;border-radius:10px;background:var(--mm-soft);font-size:14px;line-height:1.65;word-break:keep-all;overflow-wrap:anywhere}
+.mm-body p{margin:0 0 6px}.mm-body p:last-child{margin:0}
+.mm-body .mm-k{color:var(--mm-muted);font-size:12px;font-weight:700;margin-right:5px}
+.mm-body .mm-en{font-size:15px}
+.mm-body .mm-pre{white-space:pre-wrap}
+.mm-n.mm-flash>.mm-b{animation:mmflash 1.8s ease-out}
+@keyframes mmflash{0%,60%{box-shadow:0 0 0 4px var(--mm-mark)}100%{box-shadow:0 0 0 4px transparent}}
+@media (prefers-reduced-motion:reduce){.mm-n.mm-flash>.mm-b{animation:none;outline:3px solid var(--mm-mark)}}
