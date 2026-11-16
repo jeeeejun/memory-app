@@ -13,3 +13,4 @@
 - 검수·카드 추가·백업은 본 화면에 없고 따로 있어요: https://jeeeejun.github.io/memory-app/manage.html
 - 국어 문법(한글 맞춤법) 덱: `korean-grammar.html` — 처음 화면 '국어 문법' 칸. 카드는 `data/korean-grammar.json`.
 - 모고 지문 암기(`mogo.html`): 2026 고1 10월 모의고사 지문을 마인드맵(가리고 떠올리기)과 흐름(차례로 떠올리기·순서 맞추기)으로 외워요. 내용은 `tools/mogo_oct26.py`에서 만들어요.
+- 국어 문법 문제지: 파트별 PDF는 `pdf/grammar-*.pdf`, 문제 데이터는 `tools/grammar_sheets.py`로 만들어요. 앱의 '국어 문법 → 문제지'에서 꺼내 보거나 바로 풀 수 있어요.
