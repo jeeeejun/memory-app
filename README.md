@@ -12,3 +12,4 @@
 - 국어 데이터는 `tools/korean_01.py`로 만들어요(기준: 밑줄·형광펜·손글씨 필기).
 - 검수·카드 추가·백업은 본 화면에 없고 따로 있어요: https://jeeeejun.github.io/memory-app/manage.html
 - 국어 문법(한글 맞춤법) 덱: `korean-grammar.html` — 처음 화면 '국어 문법' 칸. 카드는 `data/korean-grammar.json`.
+- 모고 지문 암기(`mogo.html`): 2026 고1 10월 모의고사 지문을 마인드맵(가리고 떠올리기)과 흐름(차례로 떠올리기·순서 맞추기)으로 외워요. 내용은 `tools/mogo_oct26.py`에서 만들어요.

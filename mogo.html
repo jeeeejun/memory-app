@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="암기장">
+<title>모고 지문 암기 · 마인드맵과 흐름</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<!--
+=====================================================================
+  모고 지문 암기 (마인드맵 · 흐름) — AI 수정 가이드
+=====================================================================
+  한 파일짜리 페이지. 그림은 mindmap.js + mindmap.css 부품을 쓴다(색은 아래 .mm 변수).
+  내용은 아래 <script type="application/json" id="mogo-data"> 의 JSON 배열. 직접 고치지 말고
+  tools/mogo_oct26.py 의 P(...) 목록을 고친 뒤 `python3 tools/mogo_oct26.py` 로 다시 채운다.
+  지문 하나 = 객체 하나:
+  { "id":"20",                    ← 지문 번호 (단어장 @모고 #번호와 같게). 바꾸면 그 지문의 기록이 사라짐
+    "label":"20번",               ← (선택) 칩에 보일 이름. 없으면 "id번"
+    "type":"필자의 주장", "topic":"한 줄 주제", "answer":"③",
+    "map": { "center":"가운데 주제",
+             "branches":[ { "label":"가지 이름",
+                            "items":[ {"ko":"핵심 내용", "en":"지문 속 핵심 표현"} ] } ] },   ← 가지 3~5개, 잎 2~4개
+    "flow":[ {"tag":"도입", "ko":"이 단계 내용 한 줄", "en":"그 단계의 신호 표현"} ],          ← 글이 흘러가는 순서대로 4~6단계
+    "summary":"한국어 요약",
+    "note":"풀이 메모(어법·어휘 정답 이유, 순서·삽입 단서)" }   ← (선택) '전체 보기'에서만 보임
+  - 지문 원문 전체를 옮기지 않는다. 내 말로 정리한 구조 + 짧은 핵심 표현(en)만.
+  - en 은 시험지 원문에 실제로 있는 표현만. 가능하면 단어장에 있는 표현을 쓴다.
+  - "sample": true 인 지문은 모양 확인용 예시다. 모고 지문을 넣으면 지운다.
+  저장 키: localStorage "mogo_oct26_study_v1"
+     { miss:{지문id:[노드키]}, done:{"지문id:map"|"지문id:flow":true}, best:{지문id:틀린 횟수}, cur, mapMode, flowMode, hint }
+=====================================================================
+-->
+<link rel="stylesheet" href="mindmap.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Gowun+Dodum&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+:root{
+  --paper:#f7f6f1; --card:#fffefa; --ink:#23262e; --muted:#6b6f7a; --rule:#dfe3ea;
+  --line:#c9cfdb; --gold:#b08a2e; --red:#c2463d; --blue:#2f5fa8; --green:#3f7d4e;
+  --chip:#eceae2; --shadow:0 1px 0 rgba(35,38,46,.06),0 6px 18px rgba(35,38,46,.07);
+  --serif:"Gowun Batang",Georgia,"Apple SD Gothic Neo",serif;
+  --sans:"Gowun Dodum","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root{
+  --paper:#17191e; --card:#1f2228; --ink:#e8e6df; --muted:#9a9ea8; --rule:#2c3038;
+  --line:#3a3f49; --gold:#d4ab4c; --red:#e27367; --blue:#7fa6e6; --green:#78b487;
+  --chip:#2a2d34; --shadow:0 1px 0 rgba(0,0,0,.3),0 6px 18px rgba(0,0,0,.35); --mm-lum:64%; color-scheme:dark}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body,button,a{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.55}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--paper)}
+.wrap{max-width:760px;margin:0 auto;padding-block:20px 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:16px}
+h1{font-family:var(--serif);font-size:1.7rem;margin:0;letter-spacing:-.01em}
+.sub{color:var(--muted);font-size:.9rem;margin:2px 0 0}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,a:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.panel{display:flex;flex-direction:column;gap:14px}
+.toplinks{display:flex;gap:6px;margin-bottom:8px}
+.toplinks a{background:#0f172a;color:#facc15;padding:6px 10px;border-radius:10px;font:13px -apple-system,sans-serif;text-decoration:none}
+.menu{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.mtile{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 14px;min-height:118px;box-shadow:var(--shadow);color:var(--ink);text-decoration:none}
+.mtile:active{transform:scale(.98)}
+.mtile .ic{font-size:1.6rem;line-height:1}
+.mtile b{font-family:var(--serif);font-size:1.15rem}
+.mtile small{color:var(--muted);font-size:.82rem;word-break:keep-all}
+.pagebar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--paper);display:flex;align-items:center;gap:10px;padding:8px 0 10px;border-bottom:2px solid var(--ink)}
+.pagebar h2{font-family:var(--serif);font-size:1.3rem;margin:0;flex:none}
+.pagebar .back{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:8px 14px;min-height:40px;font-size:.95rem;flex:none}
+.pagebar .pscope{margin-left:auto;font-size:.8rem;color:var(--muted);text-align:right;word-break:keep-all}
+.label{font-size:.75rem;letter-spacing:.08em;color:var(--muted);margin-bottom:6px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:7px 12px;font-size:.9rem;min-height:38px;font-variant-numeric:tabular-nums}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.chip.alt[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:#1b1b1b}
+.chip.ok{border-color:var(--green)}
+#chips{flex-wrap:nowrap;overflow-x:auto;padding-bottom:6px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+#chips::-webkit-scrollbar{display:none}
+#chips .chip{flex:none;white-space:nowrap}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;max-width:100%}
+.seg button{border:0;background:var(--card);padding:9px 12px;min-height:42px;font-size:.92rem;white-space:nowrap}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.btn{border:1px solid var(--ink);background:var(--ink);color:var(--paper);border-radius:12px;padding:10px 16px;min-height:46px;font-size:.95rem;font-weight:700}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+.btn.sm{min-height:38px;padding:6px 12px;font-size:.88rem}
+.tip{font-size:.85rem;color:var(--muted);margin:0;word-break:keep-all}
+.empty{color:var(--muted);text-align:center;padding:30px 10px}
+.kicker{font-family:var(--mono);font-size:.78rem;color:var(--muted)}
+.head h3{font-family:var(--serif);font-size:1.25rem;margin:2px 0 0;line-height:1.35;word-break:keep-all}
+.stat{font-size:.85rem;color:var(--muted);margin-right:auto;font-variant-numeric:tabular-nums}
+.stat b{color:var(--ink)}
+.speak{border:1px solid var(--line);background:var(--card);border-radius:999px;width:34px;height:34px;display:inline-grid;place-items:center;font-size:.9rem;flex:none}
+.note{background:var(--chip);border-radius:10px;padding:10px 12px;font-size:.9rem;word-break:keep-all}
+
+/* 마인드맵 (mindmap.css 색을 이 페이지 색에 맞춤) */
+.mm{--mm-bg:var(--card);--mm-text:var(--ink);--mm-muted:var(--muted);--mm-neu:var(--line);--mm-soft:var(--chip);--mm-mark:var(--red);--mm-root-bg:var(--ink);--mm-root-fg:var(--paper)}
+.mm .en{display:block;font-family:var(--serif);font-size:.92em;color:var(--blue);font-weight:400;margin-top:1px}
+.mk{display:inline-block;border-radius:6px;cursor:pointer}
+.mk.hid{min-width:4.5em;padding:0 8px;background:var(--chip);color:var(--muted);border-bottom:2px solid var(--gold);font-weight:400;letter-spacing:.04em}
+.mk.hid.was{border-bottom-color:var(--red);box-shadow:inset 0 0 0 1.5px var(--red)}
+.mk.no{color:var(--red)}.mk.no .en{color:var(--red)}
+.mk.ok{color:var(--green)}.mk.ok .en{color:var(--green)}
+.mk.no::after{content:" ✕";font-size:.8em}.mk.ok::after{content:" ○";font-size:.8em}
+
+/* 흐름 */
+.flow{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.fstep{position:relative;display:grid;grid-template-columns:34px 1fr;gap:10px;padding-bottom:22px}
+.fstep:last-child{padding-bottom:0}
+.fstep::before{content:"";position:absolute;left:16px;top:34px;bottom:8px;border-left:2px solid var(--line)}
+.fstep::after{content:"";position:absolute;left:11px;bottom:2px;border:6px solid transparent;border-top:8px solid var(--line);border-bottom:0}
+.fstep:last-child::before,.fstep:last-child::after{display:none}
+.fnum{width:34px;height:34px;border-radius:50%;background:var(--ink);color:var(--paper);display:grid;place-items:center;font-weight:700;font-variant-numeric:tabular-nums;z-index:1}
+.fcard{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;box-shadow:var(--shadow);min-width:0;text-align:left;width:100%}
+.ftag{font-size:.78rem;font-weight:700;color:var(--red);letter-spacing:.04em}
+.fko{word-break:keep-all;margin:2px 0 0}
+.fen{display:flex;align-items:center;gap:8px;margin-top:6px;font-family:var(--serif);color:var(--blue);font-size:.95rem;overflow-wrap:anywhere}
+.fcard.hid{border-style:dashed;color:var(--muted);background:transparent;box-shadow:none}
+.fcard.next{border-color:var(--gold);border-style:solid;background:var(--card)}
+.pile{display:flex;flex-direction:column;gap:8px}
+.pcard{background:var(--card);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;text-align:left;word-break:keep-all;box-shadow:var(--shadow)}
+.pcard.bad{border-color:var(--red);animation:shake .35s}
+@keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+@media (prefers-reduced-motion:reduce){.pcard.bad{animation:none}}
+.result{background:var(--card);border-radius:12px;box-shadow:var(--shadow);padding:16px;text-align:center}
+.result b{font-family:var(--serif);font-size:1.4rem}
+select,textarea,input{font-size:max(16px,1em)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="home" class="panel">
+    <header>
+      <div class="toplinks"><a href="index.html">← 암기장</a><a href="vocab.html">단어장</a></div>
+      <h1>모고 지문 암기</h1>
+      <p class="sub">2026 고1 10월 모의고사 18~24번, 29~40번 · 지문 내용을 마인드맵과 흐름으로 외워요</p>
+    </header>
+    <nav class="menu" aria-label="외우는 방법">
+      <a class="mtile" href="#map" data-t="map"><span class="ic">🧠</span><b>마인드맵</b><small>주제 → 가지 → 핵심 내용. 가리고 떠올리기</small></a>
+      <a class="mtile" href="#flow" data-t="flow"><span class="ic">➡️</span><b>흐름</b><small>글이 흘러가는 순서. 차례로 떠올리기 · 순서 맞추기</small></a>
+    </nav>
+    <div class="note" id="homeNote"></div>
+  </div>
+
+  <div class="pagebar" id="pagebar" hidden>
+    <button class="back" id="backBtn" aria-label="메뉴로">‹ 메뉴</button>
+    <h2 id="pageTitle"></h2>
+    <span class="pscope" id="pageScope"></span>
+  </div>
+
+  <div id="pick" hidden>
+    <div class="label">지문 선택</div>
+    <div class="chips" id="chips"></div>
+  </div>
+  <div class="head" id="head" hidden></div>
+
+  <!-- 마인드맵 -->
+  <section class="panel" id="p-map" hidden>
+    <div class="row">
+      <div class="seg" id="mapMode">
+        <button data-v="view">전체 보기</button>
+        <button data-v="leaf">잎 가리기</button>
+        <button data-v="all">가지도 가리기</button>
+      </div>
+    </div>
+    <div class="row">
+      <button class="chip alt" id="hintBtn" aria-pressed="false">초성 힌트</button>
+      <button class="chip alt" id="missBtn" aria-pressed="false">몰랐던 것만</button>
+    </div>
+    <div class="row" id="mapBar"></div>
+    <div id="mapArea"></div>
+    <div class="row" id="mapDone"></div>
+    <p class="tip" id="mapTip"></p>
+  </section>
+
+  <!-- 흐름 -->
+  <section class="panel" id="p-flow" hidden>
+    <div class="row">
+      <div class="seg" id="flowMode">
+        <button data-v="step">차례로 떠올리기</button>
+        <button data-v="order">순서 맞추기</button>
+        <button data-v="all">전체 보기</button>
+      </div>
+    </div>
+    <div id="flowArea" class="panel"></div>
+    <p class="tip" id="flowTip"></p>
+  </section>
+  <div class="note" id="noteBox" hidden></div>
+</div>
+
+<!-- ===================== 지문 데이터 (편집 가능) ===================== -->
+<script type="application/json" id="mogo-data">
+[
+ {"id": "18", "type": "글의 목적", "answer": "①", "topic": "업무 관련 연수 비용 지원을 요청하는 편지", "map": {"center": "연수 비용 지원 요청 편지", "branches": [{"label": "누가 누구에게", "items": [{"ko": "마케팅 부서의 마케팅 보조 Karen Whitfield", "en": "a marketing assistant in the marketing department"}, {"ko": "Ms. Palmer에게 쓰는 편지", "en": "Dear Ms. Palmer"}]}, {"label": "왜 (배경)", "items": [{"ko": "부서에 더 기여하려고 추가 연수를 받고 싶음", "en": "receive additional training"}, {"ko": "역량을 더 키우려고", "en": "further develop my skills"}, {"ko": "지난 분기: 온라인 잠재 고객을 더 끌어야 함을 알게 됨", "en": "better attract potential customers"}]}, {"label": "요청 (핵심)", "items": [{"ko": "연수 비용 일부를 회사가 부담해 주길", "en": "cover part of my training cost"}, {"ko": "긍정적으로 검토해 주길", "en": "consider my request positively"}]}, {"label": "찾아 둔 과정", "items": [{"ko": "Smart Growth Training의 2주 과정", "en": "two-week course"}, {"ko": "디지털 마케팅 전략 중심", "en": "focuses on digital marketing strategies"}, {"ko": "1,600달러, 현재 업무에 도움이 될 것", "en": "I strongly believe it would be helpful"}]}]}, "flow": [{"tag": "자기소개", "ko": "마케팅 부서의 마케팅 보조 Karen Whitfield입니다", "en": "a marketing assistant in the marketing department"}, {"tag": "바람", "ko": "부서에 더 기여하려고 추가 연수로 역량을 키우고 싶다", "en": "As part of my efforts to contribute more"}, {"tag": "이유", "ko": "지난 분기, 온라인에서 잠재 고객을 더 잘 끌어야 한다는 걸 알게 됐다", "en": "Over the last quarter, I noticed ..."}, {"tag": "요청", "ko": "그래서 연수 비용 일부를 회사가 부담해 주길 요청한다", "en": "For this reason, I'm requesting ..."}, {"tag": "구체 내용", "ko": "디지털 마케팅 전략 2주 과정, 1,600달러 — 업무에 도움이 될 것", "en": "focuses on digital marketing strategies"}, {"tag": "마무리", "ko": "요청을 긍정적으로 검토해 주길 바란다", "en": "consider my request positively"}], "summary": "마케팅 보조 Karen이 온라인 고객 유치 역량을 키우려고 디지털 마케팅 연수를 받고 싶다며, 그 비용 일부를 회사가 지원해 달라고 요청하는 편지."},
+ {"id": "19", "type": "심경 변화", "answer": "① excited → disappointed", "topic": "방학 전날, 들뜸이 실망으로 바뀌다", "map": {"center": "방학 전날: 신남 → 실망", "branches": [{"label": "상황", "items": [{"ko": "여름 방학 전 마지막 등교일", "en": "the last day of school before summer vacation"}, {"ko": "몇 달간의 퀴즈와 과제가 끝남", "en": "months of quizzes and assignments"}]}, {"label": "신남 (excited)", "items": [{"ko": "다 뒤로하고 떠나고 싶어 못 견딤", "en": "couldn't wait to leave everything behind"}, {"ko": "사물함을 치우며 춤추다시피 함", "en": "practically danced"}, {"ko": "아무것도 기분을 망칠 수 없음", "en": "nothing could ruin my mood"}]}, {"label": "반전", "items": [{"ko": "과학 선생님 Mr. Manta가 따로 부름", "en": "called me aside"}, {"ko": "기말 실험 보고서를 내지 않았음", "en": "haven't turned in your final lab report"}, {"ko": "그 말이 찬물처럼 충격", "en": "hit me like cold water"}]}, {"label": "실망 (disappointed)", "items": [{"ko": "보충하려면 여름 학교에 나와야 함", "en": "To make up for it, you must attend summer school"}, {"ko": "방학을 실험대에서 보내게 됨", "en": "at a lab table"}, {"ko": "소중한 여름에 가장 하기 싫던 일", "en": "the last thing I wanted to do"}]}]}, "flow": [{"tag": "배경", "ko": "여름 방학 전 마지막 등교일", "en": "the last day of school before summer vacation"}, {"tag": "기대", "ko": "다 뒤로하고 떠날 생각에 들떠 사물함을 치우며 춤추다시피 했다", "en": "I couldn't wait to leave everything behind"}, {"tag": "사건", "ko": "가방을 메고 나가려는데 과학 선생님이 따로 불렀다", "en": "called me aside"}, {"tag": "충격", "ko": "기말 실험 보고서를 안 냈다는 말이 찬물처럼 덮쳤다", "en": "The words hit me like cold water"}, {"tag": "결과", "ko": "보충하려면 여름 학교에 나와야 한다", "en": "To make up for it, you must attend summer school"}, {"tag": "심경", "ko": "소중한 여름을 실험대에서 — 가장 하기 싫던 일", "en": "the last thing I wanted to do"}], "summary": "방학을 앞두고 들떠 있던 '나'가, 실험 보고서를 내지 않아 여름 학교에 나와야 한다는 말을 듣고 실망한다."},
+ {"id": "20", "type": "필자의 주장", "answer": "⑤", "topic": "세계인의 연결과 공통 과제를 고려해 세계 시민 정체성을 더해야 한다", "map": {"center": "세계 시민 정체성을 더해야 한다", "branches": [{"label": "주장", "items": [{"ko": "스스로를 세계 시민으로 생각하는 것은 필요하고 가능하다", "en": "both necessary and possible"}, {"ko": "세계 시민 의식", "en": "global citizenship"}]}, {"label": "회의론과 반박", "items": [{"ko": "일부는 세계 시민 의식에 회의적", "en": "skeptical about"}, {"ko": "인류 역사 대부분, 국민 국가의 시민이라고 생각하지도 않았음", "en": "citizens of nation-states"}, {"ko": "국민 국가 자체가 없었으니까", "en": "nation-states didn't exist"}]}, {"label": "정체성은 더해져 왔다", "items": [{"ko": "지난 몇 세기 국민 국가의 등장", "en": "The rise of nation-states"}, {"ko": "가족·민족·종교 같은 정체성에 국가 시민 의식을 더함", "en": "add state citizenship to other identities"}]}, {"label": "그래서 지금", "items": [{"ko": "세계인의 연결과 우리가 마주한 공통 과제", "en": "the common challenges we face"}, {"ko": "세계 시민 의식을 다른 정체성 위에 덧입혀야", "en": "layer global citizenship on to these other identities"}]}, {"label": "오해 금지", "items": [{"ko": "다른 정체성을 대체한다는 뜻이 아님", "en": "replaces these other identities"}, {"ko": "정체성 이야기는 하나가 아님", "en": "not a single story"}, {"ko": "가족·공동체·세계 모두에 의무가 있기 때문", "en": "we have obligations"}]}]}, "flow": [{"tag": "주장", "ko": "스스로를 세계 시민으로 생각하는 것은 필요하고 가능하다", "en": "both necessary and possible"}, {"tag": "반론", "ko": "일부는 세계 시민 의식이라는 생각에 회의적이다", "en": "Some people are skeptical about ..."}, {"tag": "반박", "ko": "하지만 인류 역사 대부분, 국민 국가의 시민이라고 생각하지도 않았다 — 국민 국가가 없었다", "en": "After all, ... nation-states didn't exist."}, {"tag": "근거", "ko": "국민 국가가 등장하면서 기존 정체성에 국가 시민 의식을 더했다", "en": "The rise of nation-states ..."}, {"tag": "결론", "ko": "세계의 연결과 공통 과제를 생각하면 세계 시민 의식도 덧입혀야 한다", "en": "Given the connections ..., we need to layer global citizenship on"}, {"tag": "보충", "ko": "대체가 아니다 — 가족, 공동체, 세계 모두에 의무가 있기 때문이다", "en": "This doesn't mean that ... replaces"}], "summary": "국민 국가 시민 의식도 나중에 더해진 정체성이듯, 세계가 연결되고 공통 과제를 마주한 지금은 기존 정체성을 버리지 않고 그 위에 세계 시민 정체성을 더해야 한다."},
+ {"id": "21", "type": "함축 의미", "answer": "①", "topic": "불만족한 직장인의 소용없는 노력", "map": {"center": "타이타닉의 갑판 의자 다시 놓기 = 소용없는 노력", "branches": [{"label": "불만족한 직장인의 믿음", "items": [{"ko": "되풀이되는 주제", "en": "a repeating theme"}, {"ko": "언젠가 상황이 기적처럼 바뀔 것", "en": "miraculously change"}, {"ko": "완벽한 직업을 우연히 만날 것", "en": "stumble into the perfect job"}]}, {"label": "실제 행동", "items": [{"ko": "현재 상황을 의미 있게 바꾸는 일은 거의 안 함", "en": "do little to meaningfully alter"}, {"ko": "채용 게시판에서 비슷한 직함의 자리를 찾음", "en": "roles with a similar job title"}, {"ko": "다른 부서·회사에서 새로 고침만 누르면 마법이 뿌려지길 기대", "en": "hit the refresh button"}]}, {"label": "결과", "items": [{"ko": "뭔가 하고 있다는 기분만 듦", "en": "feel like they are doing something"}, {"ko": "새 자리에서도 금세 전처럼 환상이 깨짐", "en": "just as disenchanted as they were before"}]}, {"label": "필자의 조언", "items": [{"ko": "접근법을 완전히 바꿔라", "en": "completely switch up your approach"}, {"ko": "같은 게임을 하면 같은 상을 받는다", "en": "you'll win the same prizes"}]}]}, "flow": [{"tag": "현상", "ko": "불만족한 직장인들은 언젠가 기적처럼 완벽한 직업을 만날 거라고 믿는다", "en": "a repeating theme"}, {"tag": "문제", "ko": "그러면서 현재 상황을 의미 있게 바꾸는 일은 거의 하지 않는다", "en": "At the same time, they do little to ..."}, {"tag": "행동", "ko": "채용 게시판에서 비슷한 직함만 찾으며 마법이 일어나길 바란다", "en": "hit the refresh button"}, {"tag": "결과", "ko": "뭔가 하는 기분만 들 뿐, 새 자리에서도 똑같이 환상이 깨진다", "en": "just as disenchanted as they were before"}, {"tag": "비유", "ko": "타이타닉에서 갑판 의자를 다시 놓는 것과 같다", "en": "rearranging deck chairs on the Titanic"}, {"tag": "조언", "ko": "접근법을 완전히 바꿔라 — 같은 게임이면 같은 상", "en": "completely switch up your approach"}], "summary": "불만족한 직장인이 방식은 그대로 둔 채 비슷한 자리로 옮기기만 하는 것은, 가라앉는 타이타닉에서 의자 배치를 바꾸는 것처럼 소용없다. 접근법 자체를 바꿔야 한다."},
+ {"id": "22", "type": "요지", "answer": "⑤", "topic": "시간을 인식하고 사용하는 방식은 사회적인 산물이다", "map": {"center": "시간의 인식·사용 = 사회적 산물", "branches": [{"label": "아닌 것", "items": [{"ko": "자연의 기본 속성이 아님", "en": "basic properties of nature"}, {"ko": "개인 경험의 심리 현상만도 아님", "en": "psychological phenomena"}]}, {"label": "사회학자의 주장", "items": [{"ko": "전통과 문화 규범이 형성함", "en": "shaped by tradition and cultural norms"}, {"ko": "상당한 정도로", "en": "to a large degree"}]}, {"label": "근거 (Zerubavel)", "items": [{"ko": "일주일 = 시간의 기본 단위", "en": "a fundamental unit of time"}, {"ko": "사회적 발명품", "en": "a social invention"}, {"ko": "문화마다 다름", "en": "varies across cultures"}]}, {"label": "예시 질문", "items": [{"ko": "9시~5시 근무", "en": "nine-to-five job routine"}, {"ko": "월말에 요금 납부", "en": "pay our bills at the end of the month"}, {"ko": "정년 65세", "en": "the retirement age"}]}, {"label": "결론", "items": [{"ko": "자연이나 인간 본질이 정한 것이 아님", "en": "dictated by nature"}, {"ko": "내면화해서 '정상'으로 받아들인 사회적 창조물", "en": "social creations that we internalize"}]}]}, "flow": [{"tag": "부정", "ko": "시간의 인식과 사용은 자연의 속성도, 개인의 심리 현상도 아니다", "en": "not just basic properties of nature"}, {"tag": "주장", "ko": "대신 전통과 문화 규범이 상당 부분 형성한다", "en": "Instead, ... shaped by tradition and cultural norms"}, {"tag": "근거", "ko": "Zerubavel — 일주일은 문화마다 다른 사회적 발명품이다", "en": "a social invention that varies across cultures"}, {"tag": "예시", "ko": "9시~5시 근무, 주말 휴무, 월말 납부, 정년 65세", "en": "Why is the retirement age sixty-five?"}, {"tag": "결론", "ko": "자연이 정한 것이 아니라 우리가 내면화해 '정상'이라 받아들인 사회적 창조물이다", "en": "social creations that we internalize"}], "summary": "시간을 느끼고 쓰는 방식은 자연법칙이나 개인 심리가 아니라 전통과 문화가 만든 것이다. 일주일, 근무 시간, 정년 같은 것도 사회가 만들어 우리가 당연하게 받아들인 것이다."},
+ {"id": "23", "type": "주제", "answer": "⑤", "topic": "내부 고발자의 행동과 공익을 지키기 위한 보호의 필요성", "map": {"center": "내부 고발자 보호의 필요성", "branches": [{"label": "배경", "items": [{"ko": "기업 차원의 불법 행위가 늘어남", "en": "illegal actions ... at the corporate level"}, {"ko": "적어도 드러난 사례가 늘어남", "en": "came to light"}]}, {"label": "내부 고발자", "items": [{"ko": "용감한 제보자가 큰 위험을 감수", "en": "risked a great deal"}, {"ko": "그 덕분에 비리가 드러남", "en": "been exposed"}, {"ko": "그래서 보호가 주목받음", "en": "come into focus"}]}, {"label": "보호가 없으면", "items": [{"ko": "보복이 두려워 신고하지 못함", "en": "for fear of reprisals"}, {"ko": "위반이 몇 년씩 발각·처벌되지 않음", "en": "go undetected and unpunished"}, {"ko": "회사·제3자·경제·대중·법치까지 피해", "en": "the rule of law"}]}, {"label": "보호의 두 기능", "items": [{"ko": "개인의 행동을 보호", "en": "Protecting the individual's actions"}, {"ko": "공익을 보호", "en": "protecting the public good"}, {"ko": "균형 잡힌 보호는 둘 다에 긍정적", "en": "well-balanced"}]}]}, "flow": [{"tag": "배경", "ko": "최근 기업 차원의 불법 행위(적어도 드러난 사례)가 늘었다", "en": "In recent years, ..."}, {"tag": "사실", "ko": "그런 비리는 용감한 제보자가 큰 위험을 감수했기에 드러났다", "en": "brave informants have risked a great deal"}, {"tag": "그래서", "ko": "내부 고발자 보호가 주목받는 것은 당연하다", "en": "Hence, ... come into focus"}, {"tag": "가정", "ko": "보복이 두려워 신고하지 못하면 위반이 몇 년씩 묻힌다", "en": "go undetected and unpunished"}, {"tag": "피해", "ko": "회사, 제3자, 경제, 대중, 법치까지 해를 입는다", "en": "even the rule of law could be affected"}, {"tag": "결론", "ko": "보호는 개인의 행동과 공익을 함께 지킨다", "en": "as well as protecting the public good"}], "summary": "기업 비리는 내부 고발자가 위험을 감수해야 드러난다. 신고를 두려워하면 피해가 사회 전체로 퍼지므로, 고발자 개인과 공익을 함께 지키는 균형 잡힌 보호가 필요하다."},
+ {"id": "24", "type": "제목", "answer": "④ Fantasizing About the Future: A Barrier to Action", "topic": "미래에 대한 환상은 행동을 막는다", "map": {"center": "미래에 대한 환상 = 행동의 걸림돌", "branches": [{"label": "문제", "items": [{"ko": "목표라는 생각이 일상의 현실과 동떨어짐", "en": "disconnected from the daily reality"}, {"ko": "목표라는 '생각'과 사랑에 빠짐", "en": "fall in love with the idea of a goal"}, {"ko": "일상이 얼마나 달라져야 하는지 잊음", "en": "pushing out of mind"}]}, {"label": "연구", "items": [{"ko": "긍정적 환상 → 노력을 덜 하게 됨", "en": "put less effort into our goals"}, {"ko": "거짓되고 섣부른 성취감", "en": "a false and premature sense of accomplishment"}]}, {"label": "낭만화", "items": [{"ko": "목표를 낭만화함", "en": "romanticize a goal"}, {"ko": "복잡함과 어려움을 얼버무림", "en": "gloss over the intricacies and challenges"}, {"ko": "새 행동을 삶에 통합하는 일", "en": "integrating a complex new behavior into our life"}]}, {"label": "한 연구의 정리", "items": [{"ko": "바라는 미래를 지금 머릿속으로 즐기도록 유혹", "en": "seduces a person to mentally enjoy"}, {"ko": "왜 아직 현실이 아닌지 돌아보지 않음", "en": "reflect on"}, {"ko": "행동할 필요가 생기지 않음", "en": "a necessity to act is not induced"}]}]}, "flow": [{"tag": "문제 제기", "ko": "목표라는 생각은 그것을 이루는 일상의 현실과 동떨어질 때가 있다", "en": "disconnected from the daily reality"}, {"tag": "설명", "ko": "목표의 '생각'에 빠져, 일상이 얼마나 달라져야 하는지 잊는다", "en": "pushing out of mind"}, {"tag": "연구", "ko": "긍정적 환상은 섣부른 성취감을 줘서 노력을 덜 하게 만든다", "en": "In fact, research even suggests ..."}, {"tag": "과정", "ko": "목표를 낭만화하며 새 행동을 삶에 넣는 복잡함을 얼버무린다", "en": "gloss over the intricacies and challenges"}, {"tag": "결론", "ko": "미래를 지금 머릿속으로 즐기게 되어 행동할 필요가 생기지 않는다", "en": "a necessity to act is not induced"}], "summary": "목표를 이룬 미래를 상상하며 즐기면 이미 이룬 듯한 성취감이 생겨, 정작 필요한 노력과 행동을 덜 하게 된다."},
+ {"id": "29", "type": "어법", "answer": "②", "topic": "'불멸' 생물 연구를 인간 노화에 바로 쓰기는 어렵다", "map": {"center": "'불멸' 생물 연구, 인간에게 바로 쓰긴 어렵다", "branches": [{"label": "생물학적 불멸", "items": [{"ko": "히드라와 불멸의 해파리", "en": "hydra and the immortal jellyfish"}, {"ko": "뚜렷한 노화 징후가 없음", "en": "don't exhibit obvious signs of aging"}, {"ko": "죽지 않는 게 아니라, 나이 들어도 죽을 확률이 늘지 않음", "en": "their likelihood of dying does not increase with age"}]}, {"label": "기대", "items": [{"ko": "노화학자들을 들뜨게 함", "en": "excite gerontologists"}, {"ko": "노화를 이길 단서", "en": "clues about how to defeat the aging process"}]}, {"label": "한계", "items": [{"ko": "몸 전체를 재생하는 특성", "en": "regenerate entire body parts"}, {"ko": "우리보다 나무에 더 가까움", "en": "more similar to trees than to us"}, {"ko": "인간 노화와 얼마나 관련 있을지 불분명", "en": "how relevant those findings will be"}]}, {"label": "결론", "items": [{"ko": "근본 기제라면 생물학은 보편적일 수도", "en": "fundamental mechanisms"}, {"ko": "포유류인 쥐의 발견도 인간에 옮기기 어려움", "en": "difficult to translate into humans"}, {"ko": "쓸모 있으려면 아주 오래 걸릴 수도", "en": "a very long time"}]}]}, "flow": [{"tag": "정의", "ko": "히드라와 불멸의 해파리는 노화 징후가 없어 '생물학적 불멸'이라 불린다", "en": "biologically immortal"}, {"tag": "단서", "ko": "죽지 않는다는 뜻은 아니다 — 나이 들어도 죽을 확률이 늘지 않을 뿐", "en": "This doesn't mean they don't die."}, {"tag": "기대", "ko": "노화를 이길 단서를 줄 수 있어 노화학자들이 들뜬다", "en": "excite gerontologists"}, {"tag": "반전", "ko": "하지만 몸을 통째로 재생하는 특성은 우리보다 나무에 가깝다", "en": "more similar to trees than to us"}, {"tag": "의문", "ko": "그 발견이 인간 노화와 관련 있을지 불분명하다 — 쥐 연구도 옮기기 어렵다", "en": "difficult to translate into humans"}, {"tag": "결론", "ko": "히드라·해파리 연구가 우리에게 쓸모 있으려면 아주 오래 걸릴 수 있다", "en": "It may be a very long time before ..."}], "summary": "히드라와 불멸의 해파리는 노화 연구에 단서를 줄 수 있지만, 재생 능력 때문에 사람과 너무 달라서 그 발견을 인간 노화에 적용하기까지는 오래 걸릴 수 있다.", "note": "어법 ② making → makes: 주어가 their property(단수)이고 문장에 동사가 없으므로 동사 makes가 와야 한다."},
+ {"id": "30", "type": "어휘", "answer": "③", "topic": "보조금의 숨은 비용", "map": {"center": "보조금의 숨은 비용", "branches": [{"label": "세 가지 수단", "items": [{"ko": "보조금·세금·규제", "en": "Subsidies, taxes, and regulations"}, {"ko": "석탄에서 벗어나 오염을 줄이게 함", "en": "switching away from coal"}, {"ko": "전환하면 이윤이 더 높을 수도", "en": "profits can be higher"}]}, {"label": "발전소의 선호", "items": [{"ko": "규제나 세금보다 보조금을 선호", "en": "prefer subsidies over regulations or taxes"}, {"ko": "스스로 비용을 내느니 정부 돈을 받음", "en": "receive money from the government"}]}, {"label": "문제 1: 다른 사람의 부담", "items": [{"ko": "기회 집합의 '확대'는 다른 이의 축소와 짝", "en": "the contraction of the opportunity set of others"}, {"ko": "일반 개인을 희생해서", "en": "at the expense of the ordinary individual"}, {"ko": "보조금을 대려고 세금이 늘어남", "en": "increased taxation"}]}, {"label": "문제 2: 효율", "items": [{"ko": "보조금은 경제를 왜곡함", "en": "distorts the economy"}, {"ko": "전기 회사가 비용 전부를 부담하지 않음", "en": "not facing the full costs"}, {"ko": "전기 값↓ 소비↑ → 온난화 악화", "en": "worsen global warming"}]}]}, "flow": [{"tag": "도입", "ko": "보조금·세금·규제 모두 발전소가 석탄에서 벗어나 오염을 줄이게 할 수 있다", "en": "switching away from coal"}, {"tag": "선호", "ko": "발전소는 그중 보조금을 좋아한다 — 비용을 내느니 돈을 받으니까", "en": "The reason is obvious."}, {"tag": "문제 1", "ko": "그들의 기회 확대는 다른 사람들의 기회 축소와 짝을 이룬다", "en": "has to be matched by the contraction"}, {"tag": "구체", "ko": "전기 회사의 '자유'는 세금을 더 내는 일반 개인을 희생해 늘어난다", "en": "at the expense of the ordinary individual"}, {"tag": "문제 2", "ko": "효율 면에서도 보조금은 경제를 왜곡한다", "en": "Moreover, ... the subsidy distorts the economy"}, {"tag": "결과", "ko": "전기 값이 낮아져 소비가 늘고 지구 온난화가 악화된다", "en": "which will worsen global warming"}], "summary": "발전소는 보조금을 좋아하지만, 보조금은 세금을 내는 일반 개인의 부담으로 주어지고, 전기 값을 낮춰 소비를 늘리므로 온난화를 악화시킬 수 있다.", "note": "어휘 ③ decreased → increased: 전기 회사의 '자유'는 일반 개인을 희생해서(at the expense of) '늘어나는' 것이다."},
+ {"id": "31", "type": "빈칸 추론", "answer": "② scarcity", "topic": "스타 트렉: 희소성이 없는 세계", "map": {"center": "스타 트렉 = 희소성이 없는 세계", "branches": [{"label": "관점", "items": [{"ko": "경제학의 렌즈로 스타 트렉을 봄", "en": "through an economic lens"}, {"ko": "곧 다가올지 모를 세계를 보는 창", "en": "provides a window into"}, {"ko": "곧 우리에게 닥칠", "en": "be upon us"}]}, {"label": "고전 경제학", "items": [{"ko": "모두에게 줄 만큼 충분하지 않다는 개념에 기초", "en": "based on the notion"}, {"ko": "시장과 가격으로 재화·서비스·자원을 배분", "en": "allocate those goods, services, and resources"}]}, {"label": "스타 트렉의 세계", "items": [{"ko": "희소성이 거의 없음 (빈칸)", "en": "there isn't much scarcity"}, {"ko": "기술로 원하는 음식을 복제", "en": "reproduce any food they want"}, {"ko": "눈 깜짝할 사이에 이동, 광년 너머 통신", "en": "in the blink of an eye"}, {"ko": "모두 교육받아 번영에 참여", "en": "participate in this prosperity"}]}, {"label": "우리 사회", "items": [{"ko": "생성형 AI의 잠재력", "en": "Generative AI has the potential"}, {"ko": "사회의 여러 차원이 풍부해질 수 있음", "en": "highly abundant"}]}]}, "flow": [{"tag": "도입", "ko": "스타 트렉을 경제학의 눈으로 보면 곧 올지 모를 세계가 보인다", "en": "through an economic lens"}, {"tag": "전제", "ko": "고전 경제학은 '모든 것이 부족하다'는 개념에 기초한다", "en": "based on the notion that ..."}, {"tag": "그래서", "ko": "시장과 가격으로 재화·서비스·자원을 배분한다", "en": "Because of that, we use markets and pricing"}, {"tag": "대조", "ko": "그러나 스타 트렉에는 희소성이 거의 없다 — 기술이 다 해 준다", "en": "In Star Trek, however, ..."}, {"tag": "모습", "ko": "모두 교육받아 번영에 참여하고, 누구나 탐험가·연구자·예술가다", "en": "participate in this prosperity"}, {"tag": "시사", "ko": "생성형 AI가 우리 사회도 그렇게 풍부하게 만들 수 있다", "en": "Generative AI has the potential ..."}], "summary": "경제학은 자원이 부족하다는 전제에서 출발하지만 스타 트렉의 세계에는 희소성이 없다. 생성형 AI가 우리 사회도 그처럼 풍부하게 만들 가능성이 있다."},
+ {"id": "32", "type": "빈칸 추론", "answer": "② demonstrate that they listened", "topic": "들어 준다고 느끼게 하려면 들었음을 보여 줘야 한다", "map": {"center": "'들어 준다'고 느끼게 하려면: 들었음을 보여 줘라", "branches": [{"label": "사람들의 바람", "items": [{"ko": "누구나 자기 말이 들린다고 느끼고 싶음", "en": "want to feel heard"}, {"ko": "마음에 걸리는 일이 있어 찾아옴", "en": "something on their mind"}, {"ko": "걱정을 듣고 해결해 주길 바람", "en": "listening to their concerns and going to address them"}]}, {"label": "세 가지 조건", "items": [{"ko": "① 상대가 주의를 기울였다고 느낌", "en": "paid attention to what they said"}, {"ko": "② 상대가 이해했다고 느낌", "en": "understood what they said"}, {"ko": "③ 상대가 들었음을 보여 줌 (빈칸)", "en": "demonstrate that they listened"}]}, {"label": "③이 핵심인 이유", "items": [{"ko": "이 마지막이 핵심", "en": "This last part is key."}, {"ko": "아무 반응이 없는 상대를 상상", "en": "provided no response"}, {"ko": "겉으로 드러나는 신호가 없으면", "en": "outward signal"}, {"ko": "실제로 들었는지 알 수 없음", "en": "whether or not they actually did"}]}]}, "flow": [{"tag": "주장", "ko": "사람은 누구나 자기 말이 들린다고 느끼고 싶어 한다", "en": "want to feel heard"}, {"tag": "예", "ko": "고객 센터에 전화하거나 사무실에 찾아올 때, 걱정을 듣고 해결해 주길 바란다", "en": "listening to their concerns"}, {"tag": "조건", "ko": "그러려면 세 가지가 필요하다 — 주의, 이해, 그리고 들었음을 보여 주기", "en": "three things have to happen"}, {"tag": "강조", "ko": "그중 마지막(보여 주기)이 핵심이다", "en": "This last part is key."}, {"tag": "이유", "ko": "다 듣고 이해했어도 겉으로 신호가 없으면 들었는지 알 수 없다", "en": "without some sort of outward signal"}], "summary": "상대가 들어 준다고 느끼려면 주의와 이해만으로는 부족하고, 들었다는 것을 겉으로 보여 주는 반응이 있어야 한다."},
+ {"id": "33", "type": "빈칸 추론", "answer": "⑤ challenges the idea of place as passive backdrop", "topic": "장소는 수동적 배경이 아니라 경험의 매체다", "map": {"center": "장소 = 수동적 배경이 아닌 경험의 매체", "branches": [{"label": "경험과 공간", "items": [{"ko": "모든 경험은 물리적 공간에서 '일어난다'", "en": "take place"}, {"ko": "공간은 거기서 일어난 사건과 분리할 수 없음", "en": "inseparable from"}, {"ko": "공간·장소·경험의 뒤얽힘", "en": "intertwining"}]}, {"label": "핵심 (빈칸)", "items": [{"ko": "장소가 수동적 배경이라는 생각에 이의를 제기함", "en": "challenges the idea of place as passive backdrop"}]}, {"label": "필자의 결론", "items": [{"ko": "공간적 틀 = 모든 경험의 매체", "en": "the spatial framework is the medium of all experiences"}, {"ko": "경험 바깥의 배경·맥락이 아님", "en": "exterior to experience"}, {"ko": "흔히 생각하는 것과 달리", "en": "as commonly supposed"}]}, {"label": "Poulet의 말", "items": [{"ko": "벨기에의 문학 비평가", "en": "literary critic"}, {"ko": "존재는 장소를 옷처럼 두름", "en": "wraps oneself up in a garment"}, {"ko": "변장이자 성격 묘사인 옷", "en": "a disguise and a characterization"}, {"ko": "장소가 없으면 추상일 뿐", "en": "only abstractions"}]}]}, "flow": [{"tag": "전제", "ko": "모든 경험은 물리적 공간에서 '일어나므로' 공간은 그 사건과 분리할 수 없다", "en": "inseparable from"}, {"tag": "주장", "ko": "이 뒤얽힘은 '장소 = 수동적 배경'이라는 생각에 이의를 제기한다 (빈칸)", "en": "challenges the idea of place as passive backdrop"}, {"tag": "전개", "ko": "장소가 경험의 중심이라면, 공간적 틀은 모든 경험의 매체다", "en": "the medium of all experiences"}, {"tag": "대조", "ko": "흔히 생각하듯 경험 바깥에 있는 배경이나 맥락이 아니다", "en": "not merely a background or context"}, {"tag": "인용", "ko": "Poulet — 존재는 장소를 옷처럼 두르며, 장소가 없으면 추상일 뿐이다", "en": "Without places, beings would be only abstractions."}], "summary": "경험은 언제나 어떤 장소에서 일어나므로 장소는 경험과 떼어 낼 수 없다. 따라서 장소는 그저 뒤에 깔린 배경이 아니라 경험을 이루는 매체다."},
+ {"id": "34", "type": "빈칸 추론", "answer": "⑤ without a complete accounting of what's happening at all other levels", "topic": "모든 모델은 '주어진 것'을 가정한다", "map": {"center": "모든 모델은 '주어진 것'을 가정한다", "branches": [{"label": "주장", "items": [{"ko": "어떤 진화 체계를 정하든 (예: 휴대 전화)", "en": "evolutionary system of interest"}, {"ko": "그냥 주어진 것으로 받아들여야 하는 것이 있음", "en": "take as a given"}, {"ko": "모든 모델은 단순화 가정을 함", "en": "simplifying assumptions"}]}, {"label": "예 1: 진화론", "items": [{"ko": "Wallace와 Darwin의 말로 된 모델", "en": "verbal model of biological evolution"}, {"ko": "변이 생성과 유전의 원리를 거의 몰랐음", "en": "variation generation and inheritance"}, {"ko": "어떻게든 일어난다고 받아들임", "en": "happened somehow"}]}, {"label": "예 2: 물리학", "items": [{"ko": "가장 세밀한 수준에서도 가정이 필요", "en": "at the finest level of detail"}, {"ko": "기본 입자의 질량과 전하", "en": "the mass and charge of fundamental particles"}, {"ko": "측정값을 받아들이고 넘어감", "en": "accept the measured values and move on"}]}, {"label": "핵심 (빈칸)", "items": [{"ko": "한 분석 수준에서 유용한 모델을 만들 수 있음", "en": "at one level of analysis"}, {"ko": "다른 모든 수준을 완전히 설명하지 않아도", "en": "without a complete accounting"}]}]}, "flow": [{"tag": "주장", "ko": "어떤 체계를 모델로 삼든, 그냥 주어진 것으로 받아들여야 하는 것이 있다", "en": "take as a given"}, {"tag": "일반화", "ko": "모든 모델은 이런 단순화 가정을 한다", "en": "Indeed, all models must make simplifying assumptions"}, {"tag": "예 1", "ko": "Wallace와 Darwin은 변이와 유전의 원리를 모른 채 진화 모델을 내놓았다", "en": "They just took as a given that ..."}, {"tag": "예 2", "ko": "물리학자도 입자의 질량과 전하를 측정값 그대로 받아들인다", "en": "Physicists, for example, ..."}, {"tag": "결론", "ko": "다른 수준을 다 설명하지 않아도 한 수준에서 유용한 모델을 만들 수 있다 (빈칸)", "en": "The key point is that ..."}], "summary": "모든 모델은 설명하지 않고 받아들이는 가정을 가진다. 다윈도 물리학자도 그랬다. 다른 수준의 일을 전부 설명하지 못해도 한 수준에서 쓸모 있는 모델을 만들 수 있다."},
+ {"id": "35", "type": "무관한 문장", "answer": "③", "topic": "번아웃은 개인 문제가 아니라 구조적 문제다", "map": {"center": "번아웃 = 개인이 아닌 구조의 문제", "branches": [{"label": "계기", "items": [{"ko": "2019년 WHO가 번아웃을 직업 현상으로 인정", "en": "an occupational phenomenon"}, {"ko": "직장 정신 건강 담론의 중요한 순간", "en": "the discourse on workplace mental health"}]}, {"label": "무엇이 바뀌나", "items": [{"ko": "임상 평가와 조직의 책임을 재구성", "en": "reframes clinical assessment and organizational responsibility"}, {"ko": "구조적·체계적 예방으로 관심을 옮김", "en": "systemic prevention"}]}, {"label": "실천", "items": [{"ko": "고용주는 구조적 개입을 채택", "en": "adopt structural interventions"}, {"ko": "개인 수준의 처방에만 의존하지 않기", "en": "relying solely on individual-level remedies"}, {"ko": "임상의는 산업 보건·리더십과 협력해 근본 원인을 다룸", "en": "address root causes"}]}, {"label": "관점 전환", "items": [{"ko": "개인의 실패나 회복 탄력성 문제로 보지 않음", "en": "a personal failing"}, {"ko": "조직 문화에 뿌리내린 구조적 문제", "en": "rooted in organizational culture"}, {"ko": "부담을 개인에게만 지우지 않기", "en": "placing the burden solely on individuals"}]}]}, "flow": [{"tag": "계기", "ko": "2019년 WHO가 번아웃을 직업 현상으로 인정했다", "en": "an occupational phenomenon"}, {"tag": "의미", "ko": "이 지정은 책임을 재구성해 구조적·체계적 예방으로 관심을 돌린다", "en": "This designation reframes ..."}, {"tag": "고용주", "ko": "개인 처방에만 기대지 말고 구조적 개입을 하라", "en": "rather than relying solely on individual-level remedies"}, {"tag": "임상의", "ko": "산업 보건·리더십과 협력해 근본 원인을 다뤄라", "en": "In practice, ... address root causes"}, {"tag": "전환", "ko": "번아웃을 개인의 실패가 아니라 조직 문화에 뿌리내린 구조적 문제로 본다", "en": "a shift away from viewing burnout as a personal failing"}, {"tag": "결론", "ko": "이 재구성은 개인에게만 부담을 지우지 않고 체계적 개입과 정책 변화의 문을 연다", "en": "This reframing is essential"}], "summary": "WHO가 번아웃을 직업 현상으로 인정하면서, 번아웃은 개인이 견뎌야 할 문제가 아니라 조직과 사회 구조가 해결해야 할 문제로 보게 되었다.", "note": "무관한 문장 ③: 개인이 습관을 바꿔 스스로 회복할 수 있다는 내용이라, '개인이 아닌 구조의 문제'라는 글의 흐름과 반대다."},
+ {"id": "36", "type": "글의 순서", "answer": "② (B)-(A)-(C)", "topic": "소리는 뇌가 만드는 심리적 개념이다", "map": {"center": "소리 = 뇌가 만드는 심리적 개념", "branches": [{"label": "소리의 시작", "items": [{"ko": "어떤 움직임에서 시작", "en": "some kind of motion"}, {"ko": "매질 속 분자를 교란", "en": "disturbs molecules"}, {"ko": "공기·물·강철·나무 같은 매질", "en": "medium"}]}, {"label": "빛과의 비교 (Newton)", "items": [{"ko": "광파 자체는 색이 없음", "en": "light waves are colorless"}, {"ko": "색의 지각은 생물의 뇌에서만 일어남", "en": "the perception of color"}, {"ko": "소리도 마찬가지", "en": "The same is true of sound."}]}, {"label": "고막에 닿기 전", "items": [{"ko": "소리의 지각은 고막에서 시작", "en": "begins at our eardrums"}, {"ko": "그 전에는 분자의 교란일 뿐", "en": "nothing more than the disturbance of molecules"}, {"ko": "측정기와 기구로 잴 수는 있음", "en": "gauges and instruments"}]}, {"label": "철학 수수께끼", "items": [{"ko": "숲에서 나무가 쓰러졌는데 듣는 이가 없다면?", "en": "philosophical riddle"}, {"ko": "소리는 심리적 개념, 뇌의 산물", "en": "a product of brains"}, {"ko": "어떤 생물도 듣지 못하면 소리가 난 게 아님", "en": "it has not made sound"}]}]}, "flow": [{"tag": "주어진 글", "ko": "소리는 매질의 분자를 교란하는 움직임에서 시작한다. Newton — 색의 지각은 뇌에서만 일어난다", "en": "light waves are colorless"}, {"tag": "(B)", "ko": "소리도 마찬가지다. 고막에 닿기 전에는 분자의 교란일 뿐이다", "en": "The same is true of sound."}, {"tag": "(A)", "ko": "그 교란을 측정할 수는 있어도 뇌에 닿기 전엔 소리가 아니다 → 나무 수수께끼", "en": "does it make a sound?"}, {"tag": "(C)", "ko": "답은 '아니다' — 소리는 뇌가 만든 심리적 개념이기 때문이다", "en": "No, because sound is a psychological concept"}], "summary": "색이 뇌에서 지각될 때만 색이듯, 소리도 뇌가 지각해야 소리다. 듣는 생물이 없으면 분자의 떨림만 있을 뿐 소리는 없다.", "note": "순서 단서: (B) The same is true of sound — 빛 이야기에서 소리로 넘어감 / (A) that disturbance가 (B)의 disturbance를 받고 수수께끼 질문으로 끝남 / (C) No — 그 질문의 답."},
+ {"id": "37", "type": "글의 순서", "answer": "③ (B)-(C)-(A)", "topic": "대면 협업은 매끄럽고 원격 협업에는 틈이 생긴다", "map": {"center": "대면은 매끄럽고, 원격에는 '틈'이 생긴다", "branches": [{"label": "대면 협업", "items": [{"ko": "서로와 의사소통 단서를 쉽게 볼 수 있음", "en": "communication cues"}, {"ko": "작업 공간은 의사소통 공간의 부분 집합", "en": "a subset of the communication space"}, {"ko": "Ishii: 매끄러운 의사소통", "en": "seamless communication"}, {"ko": "두 공간 사이에 기능적 분리가 없음", "en": "no functional separation"}]}, {"label": "원격 협업", "items": [{"ko": "작업 공간이 의사소통 공간과 분리됨", "en": "separated from the communication space"}, {"ko": "화상 회의: 한 화면엔 얼굴, 다른 화면엔 공유 문서", "en": "a shared document"}, {"ko": "단서와 작업 공간을 동시에 볼 수 없음", "en": "at the same time as"}]}, {"label": "결론", "items": [{"ko": "두 공간 사이의 인위적인 틈", "en": "an artificial seam"}, {"ko": "원격 통신 기술이 주는 영향", "en": "remote communication technology"}, {"ko": "의사소통 모델로 예측해야 함", "en": "predicted through communication models"}]}]}, "flow": [{"tag": "주어진 글", "ko": "대면 협업에서는 단서를 쉽게 보므로 작업 공간이 의사소통 공간의 부분 집합이다", "en": "a subset of the communication space"}, {"tag": "(B)", "ko": "Ishii는 이를 '매끄러운 의사소통'이라 부른다. 그러나 원격에서는 두 공간이 분리된다", "en": "However, when people are working remotely"}, {"tag": "(C)", "ko": "예 — 화상 회의에서는 얼굴과 공유 문서가 다른 화면에 있어 단서를 동시에 못 본다", "en": "For example, when video conferencing"}, {"tag": "(A)", "ko": "그래서 두 공간 사이에 인위적인 틈이 생긴다. 모델로 예측해야 할 영향이다", "en": "So, there is an artificial seam"}], "summary": "얼굴을 맞대고 일하면 작업과 의사소통이 한 공간에서 이뤄지지만, 원격으로 일하면 둘이 갈라져 인위적인 틈이 생긴다.", "note": "순서 단서: (B)의 this가 주어진 글의 상황을 받고 However로 원격 이야기 시작 → (C) For example(원격의 예) → (A) So(결론)."},
+ {"id": "38", "type": "문장 삽입", "answer": "④", "topic": "환상적 진실 효과: 반복하면 참처럼 들린다", "map": {"center": "환상적 진실 효과 = 반복하면 참처럼 들린다", "branches": [{"label": "실험 (1977)", "items": [{"ko": "심리학자 Hasher와 Goldstein", "en": "psychologists"}, {"ko": "상식 진술 60개가 참·거짓인지 얼마나 확신하는가", "en": "general-knowledge trivia-like statements"}, {"ko": "2주 간격으로 세 번 평가", "en": "at two-week intervals"}]}, {"label": "설계의 핵심", "items": [{"ko": "20개만 매번 반복됨", "en": "only twenty of the statements were repeated"}, {"ko": "나머지 40개는 새것", "en": "the other forty were new"}, {"ko": "반복 대 비반복 진술의 '진실 평가' 비교", "en": "truth-ratings"}]}, {"label": "결과", "items": [{"ko": "발견한 것은 놀라웠음", "en": "astonishing"}, {"ko": "진술이 참이든 거짓이든 상관없이", "en": "Regardless of whether"}, {"ko": "반복에 따라 참이라는 믿음이 올라감", "en": "as a function of repetition"}]}, {"label": "의미", "items": [{"ko": "자주 들을수록 더 '참'처럼 들림", "en": "the more 'true' it sounds"}, {"ko": "환상적 진실 효과", "en": "the illusory truth effect"}]}]}, "flow": [{"tag": "실험", "ko": "1977년 두 심리학자가 대학생에게 상식 진술 60개의 참·거짓을 얼마나 확신하는지 물었다", "en": "how certain they were"}, {"tag": "방법", "ko": "2주 간격으로 세 번 평가하게 했다", "en": "at two-week intervals"}, {"tag": "핵심 설계", "ko": "20개만 매번 반복되고 나머지 40개는 새로웠다", "en": "Crucially, only twenty ..."}, {"tag": "비교", "ko": "반복된 진술과 아닌 진술의 '진실 평가'를 비교했고, 결과는 놀라웠다", "en": "What they found was astonishing."}, {"tag": "결과", "ko": "참·거짓과 상관없이 반복될수록 참이라는 믿음이 올라갔다 (주어진 문장)", "en": "as a function of repetition"}, {"tag": "정리", "ko": "자주 들을수록 참처럼 들린다 = 환상적 진실 효과", "en": "In other words, ..."}], "summary": "같은 말을 반복해서 들으면 사실 여부와 상관없이 그 말을 더 참이라고 믿게 된다. 이것이 환상적 진실 효과다.", "note": "삽입 ④: 'What they found was astonishing' 다음에 발견한 내용(주어진 문장)이 오고, 'In other words'가 그것을 쉽게 풀어 말한다."},
+ {"id": "39", "type": "문장 삽입", "answer": "②", "topic": "잠수할 때는 몸 안팎의 압력을 같게 유지해야 한다", "map": {"center": "잠수: 몸 안팎의 압력을 같게", "branches": [{"label": "지상에서", "items": [{"ko": "몸 표면 1㎡당 16~18톤의 일정한 기압", "en": "constant air pressure"}, {"ko": "느끼지 못함 — 외부 압력이 내부 압력과 균형", "en": "balanced by internal pressure"}, {"ko": "폐와 몸속 공기 공간", "en": "the lungs and air cavities"}]}, {"label": "물속에서", "items": [{"ko": "대기압에 수압까지 더해짐", "en": "in addition to atmospheric pressure"}, {"ko": "안팎의 압력이 같은 상태를 유지해야 함", "en": "equal external and internal pressure"}, {"ko": "주변 수압과 같은 압력으로 호흡 혼합 기체를 공급", "en": "a breathing mixture is supplied"}]}, {"label": "수압의 규칙", "items": [{"ko": "깊이에 비례해 증가", "en": "increases proportionally with depth"}, {"ko": "10m마다 1바", "en": "1 bar for every 10 meters"}, {"ko": "10m에서는 2바 → 2기압의 기체가 필요", "en": "a pressure of 2 atmospheres"}]}]}, "flow": [{"tag": "지상", "ko": "지상에서 몸은 늘 큰 기압을 받는다", "en": "constant air pressure"}, {"tag": "하지만", "ko": "외부 압력이 폐·공기 공간의 내부 압력과 균형을 이뤄 느끼지 못한다", "en": "However, this pressure is not felt"}, {"tag": "잠수", "ko": "잠수하면 대기압에 더해 수압도 몸에 작용한다", "en": "in addition to atmospheric pressure"}, {"tag": "조건", "ko": "물속에서 압력을 느끼지 않으려면 안팎 압력을 같게 유지해야 한다 (주어진 문장)", "en": "equal external and internal pressure"}, {"tag": "방법", "ko": "주변 수압과 같은 압력의 공기나 호흡 기체를 공급한다", "en": "To achieve this, ..."}, {"tag": "계산", "ko": "수압은 10m마다 1바씩 늘어난다 → 10m에서는 2바, 2기압의 기체가 필요하다", "en": "It follows that ..."}], "summary": "지상에서는 몸 안팎의 압력이 같아 기압을 못 느낀다. 물속에서도 그 균형을 지키려면 깊이에 맞는 압력의 호흡 기체를 공급해야 한다.", "note": "삽입 ②: 바로 뒤 'To achieve this'의 this가 주어진 문장(안팎의 압력을 같게 유지하는 것)을 가리킨다."},
+ {"id": "40", "type": "요약문", "answer": "① broadly … benefiting", "topic": "험한 환경의 미역취는 화학 경보를 널리 알린다", "map": {"center": "미역취의 화학 경보: 험할수록 널리 알린다", "branches": [{"label": "평화로운 곳", "items": [{"ko": "포식자의 위협이 별로 없음", "en": "without much threat from predators"}, {"ko": "매우 구체적인 화학 경보를 보냄", "en": "chemical alarm calls"}, {"ko": "가까운 친족만 이해할 수 있음", "en": "comprehensible only to their close kin"}, {"ko": "드물게 공격받을 때", "en": "on the rare occasion"}]}, {"label": "적대적인 곳", "items": [{"ko": "그 지역의 모든 미역취가 쉽게 이해", "en": "easily understood by all the goldenrod in the area"}, {"ko": "암호화된 속삭임 망 대신", "en": "whisper networks"}, {"ko": "확성기로 위협을 방송하는 셈", "en": "broadcast the threat over loudspeaker"}]}, {"label": "발견의 의미", "items": [{"ko": "받는 식물뿐 아니라 보내는 쪽에도 이로움", "en": "beneficial ... also to the sender"}, {"ko": "힘들 때 들판에 혼자 남고 싶지 않음", "en": "left standing in a field alone"}, {"ko": "짝짓기 상대와 꽃가루 매개자가 필요", "en": "pollinators"}]}, {"label": "요약문 빈칸", "items": [{"ko": "(A) 더 널리 이해되는 화학 메시지", "en": "broadly"}, {"ko": "(B) 보내는 쪽과 받는 쪽 모두에 이득", "en": "benefiting"}]}]}, "flow": [{"tag": "발견 1", "ko": "평화로운 곳의 미역취는 공격받으면 가까운 친족만 이해하는 구체적인 화학 경보를 낸다", "en": "comprehensible only to their close kin"}, {"tag": "발견 2", "ko": "그러나 적대적인 곳의 미역취는 그 지역 모든 미역취가 이해하는 신호를 쓴다", "en": "But goldenrods in more hostile territory"}, {"tag": "비유", "ko": "속삭임 망 대신 확성기로 위협을 방송하는 셈이다", "en": "over loudspeaker, so to speak"}, {"tag": "의미", "ko": "이 화학 소통이 받는 쪽뿐 아니라 보내는 쪽에도 이롭다는 것이 처음 확인됐다", "en": "not only ... but also to the sender"}, {"tag": "이유", "ko": "정말 힘들 때 들판에 혼자 남으면 짝도, 꽃가루 매개자를 불러 줄 이웃도 없다", "en": "left standing in a field alone"}], "summary": "위협이 많은 곳의 미역취는 친족만이 아니라 주변 모든 미역취가 알아듣는 화학 신호를 보낸다. 이웃이 살아남아야 자신에게도 이롭기 때문이다."}
+]
+</script>
+
+<script src="mindmap.js"></script>
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+let DATA = [];
+try { DATA = JSON.parse($("mogo-data").textContent); } catch (e) { console.error("mogo-data JSON 오류", e); }
+const plabel = p => p.label || p.id + "번";
+
+/* ---------- 저장 ---------- */
+const KEY = "mogo_oct26_study_v1";
+let store = { miss: {}, done: {}, best: {}, cur: null, mapMode: "leaf", flowMode: "step", hint: false };
+try { const v = JSON.parse(localStorage.getItem(KEY)); if (v && typeof v === "object") store = Object.assign(store, v); } catch (e) {}
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) {} };
+if (!DATA.some(p => p.id === store.cur)) store.cur = DATA.length ? DATA[0].id : null;
+const cur = () => DATA.find(p => p.id === store.cur);
+
+function speak(text) {
+  try { const u = new SpeechSynthesisUtterance(String(text).replace(/\.\.\./g, " ")); u.lang = "en-US"; u.rate = .9; speechSynthesis.cancel(); speechSynthesis.speak(u); } catch (e) {}
+}
+const CHO = "ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ";
+const chosung = w => [...w].map(ch => { const c = ch.charCodeAt(0) - 0xAC00; return c >= 0 && c < 11172 ? CHO[Math.floor(c / 588)] : ch; }).join("");
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+
+/* ---------- 홈(메뉴) ↔ 페이지 ---------- */
+const PAGES = { map: "마인드맵", flow: "흐름" };
+let tab = "home", fromHome = false;
+function render(t) {
+  if (!PAGES[t]) t = "home";
+  tab = t;
+  $("home").hidden = t !== "home";
+  ["pagebar", "pick", "head"].forEach(id => $(id).hidden = t === "home");
+  Object.keys(PAGES).forEach(k => $("p-" + k).hidden = k !== t);
+  if (t === "home") { renderHome(); $("noteBox").hidden = true; } else { $("pageTitle").textContent = PAGES[t]; renderPage(); }
+  window.scrollTo(0, 0);
+}
+function showTab(t) {
+  if (tab === "home" && t !== "home") fromHome = true;
+  if (location.hash.slice(1) !== (t === "home" ? "" : t)) history.pushState(null, "", t === "home" ? location.pathname : "#" + t);
+  render(t);
+}
+const fromUrl = () => { const t = location.hash.slice(1); if (t !== tab && !(t === "" && tab === "home")) render(t); };
+window.addEventListener("hashchange", fromUrl);
+window.addEventListener("popstate", fromUrl);
+window.addEventListener("pageshow", fromUrl);
+document.querySelectorAll(".mtile[data-t]").forEach(t => t.addEventListener("click", e => { e.preventDefault(); showTab(t.dataset.t); }));
+$("backBtn").onclick = () => {
+  if (fromHome) { fromHome = false; history.back(); }
+  else { history.replaceState(null, "", location.pathname); render("home"); }
+};
+function renderHome() {
+  const real = DATA.filter(p => !p.sample), sample = DATA.filter(p => p.sample);
+  $("homeNote").innerHTML = real.length
+    ? `들어 있는 지문: <b>${real.map(p => esc(plabel(p))).join(", ")}</b>`
+    : `아직 모고 지문이 들어 있지 않아요. 시험지 사진을 보내 주시면 지문을 확인해서 넣을게요.` + (sample.length ? ` 지금은 모양을 볼 수 있게 <b>${sample.map(p => esc(plabel(p))).join(", ")}</b>가 들어 있어요.` : "");
+}
+
+/* ---------- 공통: 지문 칩 + 머리 ---------- */
+function renderPage() {
+  const p = cur();
+  $("chips").innerHTML = DATA.map(x => {
+    const d = store.done[x.id + ":" + tab];
+    return `<button class="chip${d ? " ok" : ""}" data-id="${esc(x.id)}" aria-pressed="${x.id === store.cur}">${d ? "✓ " : ""}${esc(plabel(x))}</button>`;
+  }).join("");
+  const on = $("chips").querySelector('[aria-pressed="true"]'); if (on) $("chips").scrollLeft = on.offsetLeft - $("chips").offsetLeft - 60;
+  $("pageScope").textContent = `${DATA.filter(x => store.done[x.id + ":" + tab]).length} / ${DATA.length} 외움`;
+  if (!p) { $("head").innerHTML = ""; $("mapArea").innerHTML = $("flowArea").innerHTML = `<div class="empty">지문 데이터가 없어요.</div>`; return; }
+  $("head").innerHTML = `<div class="kicker">${esc(plabel(p))} · ${esc(p.type || "")}${p.answer ? " · 정답 " + esc(p.answer) : ""}</div><h3>${esc(p.topic || "")}</h3>`;
+  if (tab === "map") renderMap(); else renderFlow();
+  showNote();
+}
+// 풀이 메모(어법 정답 이유, 순서 단서 등)는 답이 다 보이는 '전체 보기'에서만
+function showNote() {
+  const p = cur(), on = p && p.note && tab !== "home" && (tab === "map" ? store.mapMode === "view" && !missOnly : store.flowMode === "all");
+  $("noteBox").hidden = !on;
+  if (on) $("noteBox").innerHTML = `<b>풀이 메모</b> ${esc(p.note)}`;
+}
+$("chips").onclick = e => {
+  const b = e.target.closest(".chip"); if (!b) return;
+  store.cur = b.dataset.id; save(); mst = {}; flowReset(); renderPage();
+};
+function seg(id, key, after) {
+  const el = $(id);
+  const paint = () => el.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b.dataset.v === store[key]));
+  el.querySelectorAll("button").forEach(b => b.onclick = () => { store[key] = b.dataset.v; save(); paint(); after(); });
+  paint();
+}
+function doneBtn(kind) {
+  const k = store.cur + ":" + kind, d = !!store.done[k];
+  return `<button class="btn sm ${d ? "" : "ghost"}" data-done="${kind}">${d ? "✓ 다 외웠어요" : "다 외웠으면 체크"}</button>`;
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-done]"); if (!b) return;
+  const k = store.cur + ":" + b.dataset.done; store.done[k] = !store.done[k]; save(); renderPage();
+});
+
+/* ---------- 마인드맵 ---------- */
+// 가린 노드: 탭 → 보임(shown) → 한 번 더 → 몰랐음(no, 기록) → 한 번 더 → 알았음(ok, 기록 지움)
+let mst = {}, missOnly = false;
+const mm = MindMap($("mapArea"), {});
+const missSet = () => new Set(store.miss[store.cur] || []);
+function masked(key, isBranch) {
+  if (missOnly) return missSet().has(key);
+  return store.mapMode === "all" || (store.mapMode === "leaf" && !isBranch);
+}
+function labelHtml(key, ko, en, isBranch) {
+  const full = esc(ko) + (en ? `<span class="en">${esc(en)}</span>` : "");
+  const st = mst[key];
+  if (!masked(key, isBranch)) return full;
+  if (!st) return `<span class="mk hid${missSet().has(key) ? " was" : ""}" data-k="${key}">${store.hint ? esc(chosung(ko)) : "?"}</span>`;
+  return `<span class="mk ${st}" data-k="${key}">${full}</span>`;
+}
+function mapTree(p) {
+  const miss = missSet();
+  let branches = p.map.branches.map((b, i) => ({ b, i, items: b.items.map((it, j) => ({ it, j, key: `b${i}l${j}` })) }));
+  if (missOnly) branches = branches.map(x => ({ ...x, items: x.items.filter(y => miss.has(y.key)) })).filter(x => x.items.length || miss.has("b" + x.i));
+  return {
+    id: "r", tag: plabel(p), label: p.map.center,
+    children: branches.map(x => ({
+      id: "b" + x.i, html: labelHtml("b" + x.i, x.b.label, "", true), count: String(x.items.length),
+      children: x.items.map(y => ({ id: y.key, cls: "sm", html: labelHtml(y.key, y.it.ko, y.it.en, false) }))
+    }))
+  };
+}
+function renderMap() {
+  const p = cur(); if (!p) return;
+  $("hintBtn").setAttribute("aria-pressed", !!store.hint);
+  $("missBtn").setAttribute("aria-pressed", missOnly);
+  const tree = mapTree(p);
+  if (missOnly && !tree.children.length) { $("mapArea").innerHTML = `<div class="empty">몰랐던 것이 없어요 🎉</div>`; mapBar(); return; }
+  mm.render(tree, null, 2);
+  mapBar();
+  $("mapTip").innerHTML = store.mapMode === "view" && !missOnly
+    ? "가운데 주제에서 가지, 잎 순서로 읽어요. 가지를 누르면 접혀요. 다 읽었으면 <b>잎 가리기</b>로 떠올려 보세요."
+    : "가린 칸을 누르면 답이 보여요. <b>한 번 더 누르면 몰랐음(✕)</b>, 또 누르면 알았음(○)으로 바뀌어요. 몰랐던 칸은 다음에도 빨간 테두리로 나오고 <b>몰랐던 것만</b>으로 모아 볼 수 있어요.";
+}
+function mapBar() {
+  const hid = document.querySelectorAll("#mapArea .mk.hid").length, all = document.querySelectorAll("#mapArea .mk").length;
+  const miss = missSet().size, any = store.mapMode !== "view" || missOnly;
+  $("mapBar").innerHTML = (any ? `<span class="stat">가린 칸 <b>${all}</b> · 남은 것 <b>${hid}</b> · 몰랐음 <b style="color:var(--red)">${miss}</b></span><button class="btn sm ghost" id="reMask">다시 가리기</button>`
+    : `<span class="stat">몰랐음 <b style="color:var(--red)">${miss}</b></span>`);
+  $("mapDone").innerHTML = doneBtn("map");
+  if ($("reMask")) $("reMask").onclick = () => { mst = {}; renderMap(); };
+}
+// 부품의 접기/펴기보다 먼저 받아서, 가린 칸을 눌렀을 때는 답만 보여 줌
+$("mapArea").addEventListener("click", e => {
+  const m = e.target.closest(".mk"); if (!m) return;
+  e.stopPropagation(); e.preventDefault();
+  const k = m.dataset.k, st = mst[k], next = !st ? "shown" : st === "no" ? "ok" : "no";
+  mst[k] = next;
+  const set = missSet();
+  if (next === "no") set.add(k); if (next === "ok") set.delete(k);
+  if (set.size) store.miss[store.cur] = [...set]; else delete store.miss[store.cur];
+  save(); renderMap();
+}, true);
+seg("mapMode", "mapMode", () => { mst = {}; missOnly = false; renderMap(); showNote(); });
+$("hintBtn").onclick = () => { store.hint = !store.hint; save(); renderMap(); };
+$("missBtn").onclick = () => { missOnly = !missOnly; mst = {}; renderMap(); showNote(); };
+
+/* ---------- 흐름 ---------- */
+let fShown = 1, fPile = [], fDoneN = 0, fWrong = 0;
+function flowReset() { fShown = 1; fPile = []; fDoneN = 0; fWrong = 0; }
+function stepHtml(s, i, opt) {
+  opt = opt || {};
+  const inner = opt.hid
+    ? `<button class="fcard hid${opt.next ? " next" : ""}" data-reveal="${i}">${opt.next ? "떠올려 보고 누르기 — 다음 단계는?" : "…"}</button>`
+    : `<div class="fcard"><div class="ftag">${esc(s.tag || "")}</div><p class="fko">${esc(s.ko)}</p>${s.en ? `<div class="fen"><span>${esc(s.en)}</span><button class="speak" data-say="${esc(s.en)}" aria-label="듣기">🔊</button></div>` : ""}</div>`;
+  return `<li class="fstep"><span class="fnum">${i + 1}</span>${inner}</li>`;
+}
+function renderFlow() {
+  const p = cur(); if (!p) return;
+  const F = p.flow || [], area = $("flowArea"), mode = store.flowMode;
+  if (mode === "all") {
+    area.innerHTML = `<ol class="flow">${F.map((s, i) => stepHtml(s, i)).join("")}</ol>` +
+      (p.summary ? `<div class="note"><b>요약</b> ${esc(p.summary)}</div>` : "") + `<div class="row">${doneBtn("flow")}</div>`;
+    $("flowTip").textContent = "글이 흘러가는 순서예요. 단계 이름(도입·이유·결과 …)과 함께 통째로 읽어 보세요.";
+  } else if (mode === "step") {
+    fShown = Math.min(Math.max(fShown, 1), F.length);
+    area.innerHTML = `<div class="row"><span class="stat">단계 <b>${fShown}</b> / ${F.length}</span><button class="btn sm ghost" id="fAgain">처음부터</button>${doneBtn("flow")}</div>` +
+      `<ol class="flow">${F.map((s, i) => stepHtml(s, i, { hid: i >= fShown, next: i === fShown })).join("")}</ol>`;
+    $("fAgain").onclick = () => { fShown = 1; renderFlow(); };
+    $("flowTip").textContent = "첫 단계만 보여요. 다음에 어떤 내용이 오는지 먼저 떠올린 뒤, 노란 테두리 칸을 눌러 확인하세요.";
+  } else {
+    if (!fPile.length && fDoneN < F.length) { fPile = shuffle(F.map((s, i) => i)); if (F.length > 1 && fPile.every((v, i) => v === i)) fPile.reverse(); }
+    const finished = fDoneN >= F.length;
+    if (finished) { const b = store.best[p.id]; if (b == null || fWrong < b) { store.best[p.id] = fWrong; save(); } }
+    area.innerHTML = `<div class="row"><span class="stat">맞춘 단계 <b>${fDoneN}</b> / ${F.length} · 틀린 횟수 <b style="color:var(--red)">${fWrong}</b>${store.best[p.id] != null ? ` · 최고 기록 ${store.best[p.id]}번` : ""}</span><button class="btn sm ghost" id="fAgain">다시 섞기</button></div>` +
+      (fDoneN ? `<ol class="flow">${F.slice(0, fDoneN).map((s, i) => stepHtml(s, i)).join("")}</ol>` : "") +
+      (finished ? `<div class="result"><b>${fWrong ? `틀린 횟수 ${fWrong}번` : "한 번도 안 틀렸어요 🎉"}</b><p class="tip">순서를 다 맞췄어요.</p></div><div class="row">${doneBtn("flow")}</div>`
+        : `<div class="label">${fDoneN + 1}번째에 올 내용을 고르세요</div><div class="pile">${fPile.map(i => `<button class="pcard" data-pick="${i}">${esc(F[i].ko)}</button>`).join("")}</div>`);
+    $("fAgain").onclick = () => { flowReset(); renderFlow(); };
+    $("flowTip").textContent = "단계가 섞여 있어요. 글의 순서대로 하나씩 누르세요. 틀리면 흔들리고 횟수가 올라가요.";
+  }
+}
+$("flowArea").addEventListener("click", e => {
+  const say = e.target.closest("[data-say]"); if (say) { speak(say.dataset.say); return; }
+  const rv = e.target.closest("[data-reveal]");
+  if (rv) { if (+rv.dataset.reveal === fShown) { fShown++; renderFlow(); } return; }
+  const pk = e.target.closest("[data-pick]"); if (!pk) return;
+  const i = +pk.dataset.pick;
+  if (i === fDoneN) { fDoneN++; fPile = fPile.filter(x => x !== i); renderFlow(); }
+  else { fWrong++; pk.classList.remove("bad"); void pk.offsetWidth; pk.classList.add("bad"); document.querySelector("#flowArea .stat").innerHTML = document.querySelector("#flowArea .stat").innerHTML.replace(/(틀린 횟수 <b[^>]*>)\d+/, "$1" + fWrong); }
+});
+seg("flowMode", "flowMode", () => { flowReset(); renderFlow(); showNote(); });
+
+render(location.hash.slice(1));
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+</script>
+</body>
+</html>
