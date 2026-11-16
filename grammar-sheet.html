@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>국어 문법 문제지</title>
+<!--
+  국어 문법 문제지(A4) 화면. 데이터: data/grammar-sheets.json (tools/grammar_sheets.py 로 만든다)
+    grammar-sheet.html?id=art30            그 파트 문제지 + 정답과 해설
+    grammar-sheet.html?id=art30&ans=0      정답 쪽 빼기
+    grammar-sheet.html?ids=art30-17,spacing-22   고른 문항만(오답 노트에서 '오답만 인쇄')
+    &print=1                               도구 막대 숨김 (tools/build_grammar_pdf.js 가 PDF 만들 때 씀)
+  미리 만든 PDF 는 pdf/grammar-<id>.pdf
+-->
+<style>
+:root{--red:#c62828;--ink:#111;--muted:#555;--line:#bbb}
+*{box-sizing:border-box}
+html,body{margin:0;background:#e9e9ee;color:var(--ink);font-family:"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;touch-action:manipulation}
+.bar{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:calc(env(safe-area-inset-top) + 8px) 12px 8px;background:#17191e;color:#fff}
+.bar a,.bar button{font:inherit;font-size:14px;border:0;border-radius:10px;padding:10px 14px;min-height:42px;background:#2f3440;color:#fff;text-decoration:none;cursor:pointer}
+.bar .pri{background:#facc15;color:#111;font-weight:700}
+.bar label{font-size:13px;display:flex;align-items:center;gap:4px}
+.bar .sp{margin-left:auto}
+.fit{overflow-x:auto;padding:12px 0 40px}
+.paper{background:#fff;width:210mm;margin:0 auto;padding:14mm 13mm 16mm;font-size:9.4pt;line-height:1.5;box-shadow:0 2px 12px rgba(0,0,0,.15)}
+h1{font-size:17pt;margin:0;letter-spacing:-.02em}
+.sub{font-size:8pt;color:var(--muted)}
+.head{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;margin-bottom:8px}
+.score{font-size:8.5pt;white-space:nowrap}
+.score i{display:inline-block;width:22mm;border-bottom:1px solid #000;margin:0 3px}
+.plan{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:9px}
+.plan div{border:1.2px solid #000;border-radius:3px;padding:5px 8px;font-size:8pt}
+.plan b{display:block;font-size:9.5pt}
+.gbar{display:flex;justify-content:space-between;align-items:center;gap:8px;background:#111;color:#fff;border-radius:3px;padding:5px 9px;margin:12px 0 8px;font-size:8pt;break-after:avoid}
+.gbar b{font-size:11pt}
+.gbar.hard{background:var(--red)}
+.cols{columns:2;column-gap:9mm}
+.it{display:grid;grid-template-columns:7mm 1fr;gap:1mm;break-inside:avoid;padding:4.5px 0;border-bottom:1px solid #e3e3e3}
+.it.wide{padding:8px 0 10px}
+.it .n{font-weight:700;color:var(--red)}
+.it .q{white-space:pre-line;word-break:keep-all}
+.ox{display:block;text-align:right;letter-spacing:.05em}
+u{text-underline-offset:2px}
+.box{border:1.2px solid #000;padding:5px 9px;margin:5px 0;font-size:9pt}
+.box div{padding:1px 0}
+.ch{margin:4px 0 0 2mm;display:grid;gap:2px}
+.ch.inline{grid-template-columns:repeat(5,auto);justify-content:start;gap:2px 7mm}
+.wl{border-bottom:1px solid var(--line);height:8.5mm}
+.letters{margin:8px 0 0 3mm;font-size:11pt;letter-spacing:.62em;line-height:2.4;word-break:break-all;border-bottom:1px dotted #999;display:inline-block;padding-right:2mm}
+.ans{break-before:page;page-break-before:always}
+.ans h2{font-size:13pt;margin:0 0 6px;border-bottom:2px solid #000;padding-bottom:4px}
+.ans h3{font-size:9.5pt;margin:10px 0 3px}
+.al{display:grid;grid-template-columns:7mm 1fr;font-size:8pt;line-height:1.45;padding:2px 0;border-bottom:1px solid #eee;break-inside:avoid}
+.al b{color:var(--red)}
+.acols{columns:2;column-gap:9mm}
+.foot{margin-top:10px;font-size:7.5pt;color:var(--muted)}
+.msg{padding:40px 16px;text-align:center;color:#444}
+@page{size:A4;margin:0}
+@media print{
+  html,body{background:#fff}
+  .bar{display:none!important}
+  .fit{padding:0;overflow:visible}
+  .paper{box-shadow:none;margin:0;width:auto;padding:13mm 13mm 14mm;zoom:1!important}
+}
+</style>
+</head>
+<body>
+<div class="bar" id="bar">
+  <a href="korean-grammar.html#sheets">‹ 문제지 목록</a>
+  <label><input type="checkbox" id="withAns" checked> 정답과 해설 포함</label>
+  <span class="sp"></span>
+  <a id="pdfLink" class="pri" hidden>PDF 열기</a>
+  <button id="printBtn">인쇄 · PDF로 저장</button>
+</div>
+<div class="fit"><div class="paper" id="paper"><div class="msg">불러오는 중…</div></div></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const Q = new URLSearchParams(location.search);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const rich = s => esc(s).replace(/__(.+?)__/g, "<u>$1</u>");   // __밑줄__
+const CIRC = "①②③④⑤";
+
+function itemHtml(it, n) {
+  let b = "";
+  if (it.type === "ox") b = `<span class="ox">( O / X )</span>`;
+  if (it.box) b += `<div class="box">${it.box.map(l => `<div>${rich(l)}</div>`).join("")}</div>`;
+  if (it.type === "mc") {
+    const short = it.choices.every(c => c.length <= 9);
+    b += `<div class="ch ${short ? "inline" : ""}">${it.choices.map((c, i) => `<span>${CIRC[i]} ${rich(c)}</span>`).join("")}</div>`;
+  }
+  if (it.type === "space") b += `<div class="letters">${esc(it.text)}</div><div class="wl"></div>`;
+  if (it.type === "write") b += `<div class="wl"></div>`;
+  if (it.type === "essay") b += `<div class="wl"></div>`.repeat(it.lines || 2);
+  const wide = ["essay", "space", "write"].includes(it.type) || it.box;
+  return `<div class="it ${wide ? "wide" : ""}"><span class="n">${n}</span><div><span class="q">${rich(it.q)}</span>${b}</div></div>`;
+}
+function ansText(it) {
+  const a = it.type === "mc" ? CIRC[it.answer - 1] : it.answer;
+  return esc(a) + (it.explain ? " — " + esc(it.explain) : "");
+}
+function render(d) {
+  const withAns = $("withAns").checked;
+  const ids = (Q.get("ids") || "").split(",").filter(Boolean);
+  let html = "";
+  if (ids.length) {
+    // 고른 문항만 (오답 노트)
+    const all = d.sheets.flatMap(s => s.groups.flatMap(g => g.items.map(it => ({ ...it, part: s.title.replace(/^한글 맞춤법 — | 실전.*$/g, "") }))));
+    const list = ids.map(i => all.find(x => x.id === i)).filter(Boolean);
+    document.title = `오답 다시 풀기 ${list.length}제`;
+    html = `<div class="head"><div><h1>오답 다시 풀기 ${list.length}제</h1><div class="sub">국어 문법 — 한글 맞춤법 · 내가 틀린 문항만 모음</div></div><div class="score">날짜 <i></i> 점수 <i></i>/ ${list.length}</div></div>
+      <div class="gbar hard"><b>다시 풀기</b><span>틀린 문항 · 풀고 나서 정답과 해설로 확인</span></div>
+      ${list.map((it, i) => itemHtml(it, i + 1)).join("")}`;
+    if (withAns) html += `<div class="ans"><h2>정답과 해설</h2>${list.map((it, i) => `<div class="al"><b>${i + 1}</b><span>${ansText(it)} <span style="color:#777">(${esc(it.part)} ${it.n}번)</span></span></div>`).join("")}</div>`;
+  } else {
+    const s = d.sheets.find(x => x.id === Q.get("id")) || d.sheets[0];
+    document.title = s.title;
+    if (s.pdf) { $("pdfLink").href = s.pdf; $("pdfLink").hidden = false; }
+    html = `<div class="head"><div><h1>${esc(s.title)}</h1><div class="sub">${esc(s.sub)} · 제한 시간 ${s.minutes}분</div></div><div class="score">날짜 <i></i> 점수 <i></i>/ ${s.count}</div></div>
+      <div class="plan">${s.groups.map(g => `<div><b>${esc(g.name)} ${g.items.length}문항 · ${g.level}</b>${g.from}~${g.to}번 · ${esc(g.time)}</div>`).join("")}</div>` +
+      s.groups.map(g => `<div class="gbar ${g.level === "상" ? "hard" : ""}"><b>${esc(g.name)} · ${g.level}</b><span>${g.from}~${g.to}번 · ${esc(g.time)} · ${esc(g.note)}</span></div>
+        <div class="${g.level === "하" ? "cols" : ""}">${g.items.map(it => itemHtml(it, it.n)).join("")}</div>`).join("");
+    if (withAns) html += `<div class="ans"><h2>정답과 해설</h2>` + s.groups.map(g =>
+      `<h3>${esc(g.name)} (${g.from}~${g.to})</h3><div class="${g.level === "하" ? "acols" : ""}">${g.items.map(it => `<div class="al"><b>${it.n}</b><span>${ansText(it)}</span></div>`).join("")}</div>`).join("") + `</div>`;
+    html += `<div class="foot">${esc(s.source)} · 암기장</div>`;
+  }
+  $("paper").innerHTML = html;
+  fit();
+}
+// 휴대폰에서는 A4 종이를 화면 너비에 맞춰 줄여 보여 준다 (인쇄할 때는 원래 크기)
+function fit() { const p = $("paper"); p.style.zoom = 1; const z = Math.min(1, (window.innerWidth - 8) / p.offsetWidth); p.style.zoom = z; }
+window.addEventListener("resize", fit);
+window.addEventListener("beforeprint", () => { $("paper").style.zoom = 1; });
+window.addEventListener("afterprint", fit);
+
+if (Q.get("print")) $("bar").style.display = "none";
+if (Q.get("ans") === "0") $("withAns").checked = false;
+let DATA = null;
+fetch("data/grammar-sheets.json", { cache: "no-cache" }).then(r => r.json()).then(d => { DATA = d; render(d); document.body.dataset.ready = "1"; })
+  .catch(e => { $("paper").innerHTML = `<div class="msg">문제 데이터를 불러오지 못했어요. (${esc(e)})</div>`; });
+$("withAns").onchange = () => DATA && render(DATA);
+$("printBtn").onclick = () => window.print();
+</script>
+</body>
+</html>
