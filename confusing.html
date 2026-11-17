@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="암기장">
+<title>헷갈리는 부분 — 국어 문법</title>
+<!--
+=====================================================================
+  헷갈리는 부분 — AI 수정 가이드
+=====================================================================
+  국어 문법 덱(korean-grammar.html)과 따로 둔 페이지. 요약본 + 암기 카드만 있다.
+  내용은 data/confusing.json 에만 있다 → tools/confusing_ko.py 로 만든다(직접 고치지 않는다).
+    { deck, source, sections:[{id, title, summary:[줄...]}], cards:[{id, section, front, back, explain}] }
+    요약 줄의 **굵게** 는 강조로 보인다.
+  화면: #sum 요약 / #card 카드
+  저장 키: localStorage "confusing_progress_v1"  (다른 덱 기록과 분리)
+     { s:{카드id: 1 몰랐음 | 2 애매 | 3 알았음}, sec:"all"|섹션id, scope:"all"|"todo"|"wrong", shuffle:bool, tab }
+=====================================================================
+-->
+<style>
+:root{
+  --paper:#f7f6f1; --card:#fffefa; --ink:#23262e; --muted:#6b6f7a; --rule:#dfe3ea;
+  --line:#c9cfdb; --gold:#b08a2e; --red:#c2463d; --blue:#2f5fa8; --green:#3f7d4e;
+  --chip:#eceae2; --hl:#fbeeb0; --shadow:0 1px 0 rgba(35,38,46,.06),0 6px 18px rgba(35,38,46,.07);
+  --serif:"Gowun Batang",Georgia,"Apple SD Gothic Neo",serif;
+  --sans:"Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root{
+  --paper:#17191e; --card:#1f2228; --ink:#e8e6df; --muted:#9a9ea8; --rule:#2c3038;
+  --line:#3a3f49; --gold:#d4ab4c; --red:#e27367; --blue:#7fa6e6; --green:#78b487;
+  --chip:#2a2d34; --hl:#4a4224; --shadow:0 1px 0 rgba(0,0,0,.3),0 6px 18px rgba(0,0,0,.35); color-scheme:dark}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body,button,a{touch-action:manipulation}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.55}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--paper)}
+.wrap{max-width:760px;margin:0 auto;padding-block:calc(env(safe-area-inset-top,0px) + 14px) 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:16px}
+.head{display:flex;align-items:center;gap:10px}
+.head h1{font-family:var(--serif);font-size:1.5rem;margin:0;letter-spacing:-.01em}
+.head .back{margin-left:auto;border:1px solid var(--line);background:var(--card);border-radius:999px;padding:8px 14px;color:var(--ink);text-decoration:none;font-size:.9rem;flex:none}
+.sub{color:var(--muted);font-size:.85rem;margin:-10px 0 0;word-break:keep-all}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.tabs{display:grid;grid-template-columns:1fr 1fr;border-bottom:2px solid var(--ink);position:sticky;top:env(safe-area-inset-top,0px);background:var(--paper);z-index:5}
+.tab{border:0;background:none;padding:12px 2px;font-size:1rem;color:var(--muted);border-bottom:4px solid transparent;margin-bottom:-2px}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--red);font-weight:700}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:7px 12px;font-size:.88rem;min-height:38px;word-break:keep-all}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{border:0;background:var(--card);padding:8px 12px;min-height:40px;font-size:.9rem}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.chk{display:inline-flex;gap:6px;align-items:center;font-size:.9rem}
+.panel{display:flex;flex-direction:column;gap:14px}
+/* 요약 */
+.sheet{background:var(--card);border-radius:10px;box-shadow:var(--shadow);overflow:hidden}
+.sheet summary{list-style:none;cursor:pointer;padding:16px 18px;display:flex;align-items:baseline;gap:10px}
+.sheet summary::-webkit-details-marker{display:none}
+.sheet summary h2{font-family:var(--serif);font-size:1.15rem;margin:0;word-break:keep-all}
+.sheet summary .n{margin-left:auto;font-size:.8rem;color:var(--muted);flex:none}
+.sheet summary::after{content:"▾";color:var(--muted);flex:none}
+.sheet[open] summary::after{content:"▴"}
+.sheet ul{margin:0;padding:4px 18px 18px 34px;display:flex;flex-direction:column;gap:9px;border-top:1px solid var(--rule);padding-top:14px}
+.sheet li{word-break:keep-all;line-height:1.65}
+.sheet li::marker{color:var(--red)}
+.sheet li b{background:linear-gradient(transparent 60%,var(--hl) 60%)}
+.sheet .go{margin:0 18px 16px;border:1px solid var(--line);background:none;border-radius:10px;padding:8px 12px;font-size:.88rem}
+/* 카드 */
+.bar{display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--chip)}
+.bar span{display:block;height:100%;transition:width .3s}
+.legend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:.82rem;color:var(--muted)}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:4px;vertical-align:1px}
+.s3{background:var(--green)}.s2{background:var(--gold)}.s1{background:var(--red)}.s0{background:var(--line)}
+.card{position:relative;background:var(--card);border-radius:8px;box-shadow:var(--shadow);min-height:280px;padding:34px 20px 22px 44px;
+  background-image:repeating-linear-gradient(var(--card) 0 33px,var(--rule) 33px 34px);background-position:0 54px;
+  display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:12px;cursor:pointer;user-select:none;border:0;width:100%}
+.card::before{content:"";position:absolute;left:28px;top:0;bottom:0;width:2px;background:var(--red);opacity:.5}
+.card .tag{position:absolute;top:10px;left:44px;right:14px;display:flex;justify-content:space-between;font-size:.75rem;color:var(--muted)}
+.card .front{font-family:var(--serif);font-size:clamp(1.25rem,5vw,1.6rem);font-weight:700;line-height:1.4;word-break:keep-all}
+.card .back{font-size:1.2rem;color:var(--blue);font-weight:700;word-break:keep-all}
+.card .exp{font-size:.92rem;color:var(--muted);word-break:keep-all;max-width:34em}
+.card .hint{font-size:.85rem;color:var(--muted)}
+.rate{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.rate button{border:0;border-radius:12px;padding:12px 6px;min-height:54px;font-size:1.02rem;font-weight:700;color:#fff}
+.r1{background:var(--red)}.r2{background:var(--gold);color:#1b1b1b!important}.r3{background:var(--green)}
+.nav{display:flex;justify-content:space-between;align-items:center;font-size:.85rem;color:var(--muted)}
+.nav button{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:7px 14px}
+.ghost{border:1px solid var(--line);background:none;border-radius:10px;padding:9px 14px;font-size:.88rem;color:var(--muted);align-self:center}
+.empty{color:var(--muted);text-align:center;padding:30px 10px;word-break:keep-all}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <h1>헷갈리는 부분</h1>
+    <a class="back" href="index.html">← 암기장</a>
+  </div>
+  <p class="sub" id="src">국어 문법</p>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" data-tab="sum">요약</button>
+    <button class="tab" role="tab" data-tab="card">카드</button>
+  </div>
+
+  <div class="chips" id="secs"></div>
+
+  <section class="panel" id="p-sum" hidden>
+    <div class="row">
+      <button class="ghost" id="openAll">모두 펴기</button>
+      <button class="ghost" id="closeAll">모두 접기</button>
+    </div>
+    <div class="panel" id="sumList"></div>
+  </section>
+
+  <section class="panel" id="p-card" hidden>
+    <div class="row">
+      <div class="seg" id="scope">
+        <button data-v="all">전체</button>
+        <button data-v="todo">아직 모름</button>
+        <button data-v="wrong">몰랐던 것</button>
+      </div>
+      <label class="chk"><input type="checkbox" id="shuffle"> 섞기</label>
+    </div>
+    <div class="bar" id="bar"></div>
+    <div class="legend" id="legend"></div>
+    <div id="cardArea"></div>
+    <button class="ghost" id="reset">↺ 고른 범위 기록 초기화</button>
+  </section>
+</div>
+
+<script>
+(() => {
+  const KEY = 'confusing_progress_v1';
+  let st = {};
+  try { st = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { st = {}; }
+  st.s = st.s || {}; st.sec = st.sec || 'all'; st.scope = st.scope || 'all';
+  if (typeof st.shuffle !== 'boolean') st.shuffle = true;
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {} };
+  const $ = s => document.querySelector(s);
+  const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const md = t => esc(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+
+  let D = null, deck = [], pos = 0, flipped = false;
+
+  function setTab(t) {
+    st.tab = t; save();
+    document.querySelectorAll('.tab').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === t));
+    $('#p-sum').hidden = t !== 'sum';
+    $('#p-card').hidden = t !== 'card';
+    if (location.hash !== '#' + t) history.replaceState(null, '', '#' + t);
+    t === 'sum' ? renderSum() : buildDeck();
+  }
+
+  function renderSecs() {
+    const all = [{ id: 'all', title: '전체' }].concat(D.sections);
+    $('#secs').innerHTML = all.map(s => `<button class="chip" data-id="${s.id}" aria-pressed="${st.sec === s.id}">${esc(s.title)}</button>`).join('');
+    $('#secs').querySelectorAll('.chip').forEach(b => b.onclick = () => {
+      st.sec = b.dataset.id; save(); renderSecs();
+      st.tab === 'sum' ? renderSum() : buildDeck();
+    });
+  }
+
+  function renderSum() {
+    const list = D.sections.filter(s => st.sec === 'all' || s.id === st.sec);
+    $('#sumList').innerHTML = list.map(s => `
+      <details class="sheet"${st.sec !== 'all' ? ' open' : ''}>
+        <summary><h2>${esc(s.title)}</h2><span class="n">카드 ${D.cards.filter(c => c.section === s.id).length}장</span></summary>
+        <ul>${s.summary.map(l => `<li>${md(l)}</li>`).join('')}</ul>
+        <button class="go" data-id="${s.id}">이 부분 카드로 외우기 →</button>
+      </details>`).join('');
+    $('#sumList').querySelectorAll('.go').forEach(b => b.onclick = () => { st.sec = b.dataset.id; save(); renderSecs(); setTab('card'); });
+  }
+
+  function inScope(c) {
+    if (st.sec !== 'all' && c.section !== st.sec) return false;
+    const v = st.s[c.id] || 0;
+    if (st.scope === 'todo') return v !== 3;
+    if (st.scope === 'wrong') return v === 1 || v === 2;
+    return true;
+  }
+
+  function buildDeck() {
+    deck = D.cards.filter(inScope);
+    if (st.shuffle) for (let i = deck.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [deck[i], deck[j]] = [deck[j], deck[i]]; }
+    pos = 0; flipped = false;
+    document.querySelectorAll('#scope button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === st.scope));
+    $('#shuffle').checked = st.shuffle;
+    renderCard();
+  }
+
+  function renderStats() {
+    const pool = D.cards.filter(c => st.sec === 'all' || c.section === st.sec);
+    const n = [0, 0, 0, 0]; pool.forEach(c => n[st.s[c.id] || 0]++);
+    const pct = k => pool.length ? (n[k] / pool.length * 100) : 0;
+    $('#bar').innerHTML = [3, 2, 1].map(k => `<span class="s${k}" style="width:${pct(k)}%"></span>`).join('');
+    $('#legend').innerHTML = `<span><i class="dot s3"></i>알았음 <b>${n[3]}</b></span><span><i class="dot s2"></i>애매 <b>${n[2]}</b></span><span><i class="dot s1"></i>몰랐음 <b>${n[1]}</b></span><span><i class="dot s0"></i>안 봄 <b>${n[0]}</b></span>`;
+  }
+
+  function secTitle(id) { const s = D.sections.find(x => x.id === id); return s ? s.title : ''; }
+
+  function renderCard() {
+    renderStats();
+    const box = $('#cardArea');
+    if (!deck.length) {
+      box.innerHTML = `<p class="empty">${st.scope === 'all' ? '카드가 없어요.' : '이 범위는 다 외웠어요! 👏<br>‘전체’를 눌러 다시 볼 수 있어요.'}</p>`;
+      return;
+    }
+    if (pos >= deck.length) {
+      box.innerHTML = `<p class="empty">한 바퀴 끝! (${deck.length}장)</p><div class="row" style="justify-content:center"><button class="ghost" id="again">처음부터 다시</button></div>`;
+      $('#again').onclick = buildDeck;
+      return;
+    }
+    const c = deck[pos];
+    box.innerHTML = `
+      <button class="card" id="card" aria-label="카드 뒤집기">
+        <span class="tag"><span>${esc(secTitle(c.section))}</span><span>${pos + 1} / ${deck.length}</span></span>
+        <div class="front">${esc(c.front)}</div>
+        ${flipped ? `<div class="back">${esc(c.back)}</div>${c.explain ? `<div class="exp">${esc(c.explain)}</div>` : ''}` : '<div class="hint">탭해서 답 보기</div>'}
+      </button>
+      <div class="rate" ${flipped ? '' : 'hidden'}>
+        <button class="r1" data-v="1">몰랐음</button>
+        <button class="r2" data-v="2">애매</button>
+        <button class="r3" data-v="3">알았음</button>
+      </div>
+      <div class="nav"><button id="prev" ${pos ? '' : 'disabled'}>← 이전</button><span>${['', '몰랐음', '애매', '알았음'][st.s[c.id] || 0] || '처음 봄'}</span><button id="skip">건너뛰기 →</button></div>`;
+    $('#card').onclick = () => { flipped = !flipped; renderCard(); };
+    box.querySelectorAll('.rate button').forEach(b => b.onclick = () => { st.s[c.id] = +b.dataset.v; save(); pos++; flipped = false; renderCard(); });
+    $('#prev').onclick = () => { if (pos) { pos--; flipped = false; renderCard(); } };
+    $('#skip').onclick = () => { pos++; flipped = false; renderCard(); };
+  }
+
+  document.querySelectorAll('.tab').forEach(b => b.onclick = () => setTab(b.dataset.tab));
+  document.querySelectorAll('#scope button').forEach(b => b.onclick = () => { st.scope = b.dataset.v; save(); buildDeck(); });
+  $('#shuffle').onchange = e => { st.shuffle = e.target.checked; save(); buildDeck(); };
+  $('#openAll').onclick = () => document.querySelectorAll('.sheet').forEach(d => d.open = true);
+  $('#closeAll').onclick = () => document.querySelectorAll('.sheet').forEach(d => d.open = false);
+  $('#reset').onclick = () => {
+    if (!confirm('고른 범위의 카드 기록을 지울까요?')) return;
+    D.cards.forEach(c => { if (st.sec === 'all' || c.section === st.sec) delete st.s[c.id]; });
+    save(); buildDeck();
+  };
+
+  fetch('data/confusing.json', { cache: 'no-cache' }).then(r => r.json()).then(d => {
+    D = d;
+    $('#src').textContent = d.source;
+    if (st.sec !== 'all' && !d.sections.some(s => s.id === st.sec)) st.sec = 'all';
+    renderSecs();
+    const h = location.hash.slice(1);
+    setTab(h === 'card' || h === 'sum' ? h : (st.tab || 'sum'));
+  }).catch(() => { $('#p-sum').hidden = false; $('#sumList').innerHTML = '<p class="empty">내용을 불러오지 못했어요. 인터넷 연결을 확인해 주세요.</p>'; });
+})();
+</script>
+</body>
+</html>

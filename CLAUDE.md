@@ -32,6 +32,7 @@
   - 문제지·짝: `tools/grammar_sheets.py` → `data/grammar-sheets.json`(직접 고치지 않는다). 파트(시트)마다 '몰입 준비·하 → 필기 문제·상 → 종합·상' 3단 구성, 문항 종류 `B` 빈칸 / `OX` / `P` 둘 중 고르기 / `MC` / `SP` 띄어쓰기 고쳐 쓰기 / `W` 직접 쓰기 / `E` 서술형(자가 채점). 교과서 밖 낱말을 쓴 문항은 해설에 "(교과서 밖 확장)". `spacing`은 사용자가 준 PDF(띄어쓰기 50제)를 그대로 옮긴 것.
   - 새 파트를 배우면: 스크립트에 `SHEETS.append(...)`와 `PAIRS_RAW`를 추가 → `python3 tools/grammar_sheets.py && node tools/build_grammar_pdf.js` → `pdf/grammar-<id>.pdf`가 생긴다(글꼴은 실행할 때만 내려받음). `korean-grammar.html`의 `PART`·`CARD_PART`에 파트 이름을 추가한다. 사용자가 PDF를 직접 주면 `pdf/`에 그대로 두고 빌드 스크립트의 `SKIP`에 넣는다.
   - `grammar-sheet.html?id=…`: 문제지 A4 화면(인쇄·PDF 저장), `?ids=문항id,…`는 오답만 모은 문제지.
+- 헷갈리는 부분: `confusing.html` (국어 문법 덱과 별개, 요약 `#sum` / 카드 `#card`만). 처음 화면 '국어 문법' 칸에서 링크. 내용은 `tools/confusing_ko.py`의 `SECTIONS`(요약 줄, `**굵게**`)·`CARDS`(섹션, 앞면, 뒷면, 해설) → `data/confusing.json`(직접 고치지 않는다). 카드 id `cf-<섹션>-<순번>`, 뺄 카드는 `HIDE`. 기록 키 `confusing_progress_v1`. 사용자가 헷갈린다고 한 내용을 추가할 때 여기에 넣는다.
 - 빈칸 탭: `sentence` + `blanks`로 빈칸 추론(탭해서 확인 / 직접 쓰기 / 초성 힌트 / 틀린 것만). 단원·`topic` 순서는 `order`.
   - 단계(난이도): 1 큰 틀(소제목마다 핵심 문장 1~2개, 핵심 빈칸만) → 2 핵심 빈칸(모든 문장) → 3 전체 세부(모든 빈칸). 나머지 빈칸은 글자로 보인다.
   - 핵심 빈칸은 자동: `a`(답)에 들어 있는 빈칸. 큰 틀 문장도 자동: 핵심 빈칸이 이름·사건·연도인 문장.
