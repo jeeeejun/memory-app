@@ -157,6 +157,9 @@ input[type=text],input[type=search]{width:100%;font:inherit;font-size:1.15rem;pa
 .star{border:0;background:none;font-size:1.3rem;width:36px;height:36px;color:var(--line)}
 .star.on{color:var(--gold)}
 .empty{color:var(--muted);text-align:center;padding:30px 10px}
+.hsearch input{width:100%}
+.item mark{background:var(--hl);color:inherit;border-radius:3px;padding:0 1px}
+.hideM .item .m mark{background:none}
 .tip{font-size:.85rem;color:var(--muted)}
 /* 흐름 맵 (mindmap.css 색을 이 페이지 색에 맞춤) */
 .mm{--mm-bg:var(--card);--mm-text:var(--ink);--mm-muted:var(--muted);--mm-neu:var(--line);--mm-soft:var(--chip);--mm-mark:var(--red);--mm-root-bg:var(--ink);--mm-root-fg:var(--paper)}
@@ -1933,6 +1936,9 @@ mural|벽화
     <p class="sub">2026 고1 10월 모의고사 18–24·29–40번 · 빠바 07–08과 · 영어 교과서 3과 어휘</p>
   </header>
 
+  <form class="hsearch" id="hsearch" role="search" onsubmit="return false">
+    <input type="search" id="hq" placeholder="🔍 단어·뜻 검색 후 엔터 (모고·빠바·교과서 전체)" aria-label="단어 검색" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
+  </form>
   <nav class="menu" aria-label="학습 메뉴">
     <a class="mtile" href="#card" data-t="card"><span class="ic">🃏</span><b>카드</b><small>뒤집으며 외우기</small></a>
     <a class="mtile" href="#quiz" data-t="quiz"><span class="ic">✅</span><b>4지선다</b><small>뜻·단어 고르기</small></a>
@@ -2026,8 +2032,9 @@ mural|벽화
   <!-- LIST -->
   <section class="panel" id="p-list" hidden>
     <div class="row">
-      <input type="search" id="search" placeholder="단어나 뜻 검색 (예: 위장, reciprocity)" aria-label="검색">
+      <input type="search" id="search" placeholder="단어나 뜻 검색 (예: 노화학자, reciprocity, ㄴㅎㅎㅈ)" aria-label="검색" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
     </div>
+    <p class="tip" id="searchInfo" hidden></p>
     <div class="row">
       <button class="chip" id="hideM" aria-pressed="false">뜻 가리기</button>
       <span class="tip">점을 누르면 상태가 바뀝니다 (안 봄 → 모름 → 애매 → 앎). 뜻을 가린 상태에선 줄을 눌러 확인.</span>
@@ -2363,20 +2370,60 @@ function drawSpell() {
 }
 
 /* ---------- LIST ---------- */
-$("search").addEventListener("input", renderList);
+/* 검색: 띄어쓰기·대소문자·기호(~ · ( ) …) 무시, 한글 초성(ㄴㅎㅎㅈ)도 됨, 여러 낱말은 모두 들어 있어야 함.
+   아이폰 한글 입력은 글자를 조합하는 중이라 input 이벤트만으로는 마지막 글자가 늦게 들어올 수 있어 여러 이벤트에서 다시 찾는다. */
+const CHO = "ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ";
+const chosungOf = t => [...t].map(ch => { const c = ch.charCodeAt(0) - 0xAC00; return c >= 0 && c < 11172 ? CHO[Math.floor(c / 588)] : ch; }).join("");
+const sNorm = t => String(t || "").normalize("NFC").toLowerCase().replace(/[\s~·∙•.,;:'"’‘“”()\[\]{}\/\-–—…?!]/g, "");
+WORDS.forEach(w => { w._w = sNorm(w.w); w._m = sNorm(w.m); w._c = chosungOf(w._m); });
+function searchWords(raw) {
+  const toks = String(raw || "").normalize("NFC").trim().split(/\s+/).map(sNorm).filter(Boolean);
+  if (!toks.length) return null;
+  const whole = sNorm(raw);
+  const hits = WORDS.filter(w => toks.every(t => w._w.includes(t) || w._m.includes(t) || (/^[ㄱ-ㅎ]+$/.test(t) && w._c.includes(t)))
+    || (whole && (w._w.includes(whole) || w._m.includes(whole))));
+  // 정확히 같은 것 → 앞부분이 같은 것 → 나머지
+  const rank = w => (w._w === whole || w._m.split(/[,;]/).some(x => x === whole) ? 0 : w._w.startsWith(whole) || w._m.startsWith(whole) ? 1 : 2);
+  return hits.map((w, i) => [rank(w), i, w]).sort((a, b) => a[0] - b[0] || a[1] - b[1]).map(x => x[2]);
+}
+// 화면에 보이는 글자에서 찾은 부분을 칠함 (띄어쓰기·기호를 건너뛰며 맞춤)
+function hl(text, raw) {
+  const toks = String(raw || "").normalize("NFC").trim().split(/\s+/).map(sNorm).filter(t => t && !/^[ㄱ-ㅎ]+$/.test(t));
+  const src = String(text), map = [], flat = [];
+  [...src].forEach((ch, i) => { const n = sNorm(ch); if (n) { flat.push(n); map.push(i); } });
+  const f = flat.join(""), mark = new Array(src.length).fill(false);
+  toks.forEach(t => { let k = f.indexOf(t); while (k >= 0) { for (let j = k; j < k + t.length; j++) mark[map[j]] = true; k = f.indexOf(t, k + t.length); } });
+  let out = "", on = false;
+  [...src].forEach((ch, i) => { if (mark[i] !== on) { out += mark[i] ? "<mark>" : "</mark>"; on = mark[i]; } out += esc(ch); });
+  return out + (on ? "</mark>" : "");
+}
+let lastQ = null;
+const runSearch = () => { const q = $("search").value; if (q === lastQ) return; lastQ = q; renderList(); };
+["input", "keyup", "compositionend", "change", "search"].forEach(ev => $("search").addEventListener(ev, () => setTimeout(runSearch, 0)));
+// 홈 화면 검색창: 쓰고 검색(엔터)을 누르면 단어장 목록으로 가서 찾음
+function goSearch() {
+  const q = $("hq").value; if (!q.trim()) return;
+  $("hq").blur(); $("search").value = q; lastQ = null; showTab("list"); $("hq").value = "";
+}
+$("hsearch").addEventListener("submit", e => { e.preventDefault(); goSearch(); });
+$("hq").addEventListener("keydown", e => { if (e.key === "Enter" && !e.isComposing) { e.preventDefault(); goSearch(); } });
+$("hq").addEventListener("search", goSearch);
 $("hideM").onclick = () => { const on = $("hideM").getAttribute("aria-pressed") !== "true"; $("hideM").setAttribute("aria-pressed", on); renderList(); };
 function renderList() {
-  const q = $("search").value.trim().toLowerCase();
-  const list = q ? WORDS.filter(w => w.w.toLowerCase().includes(q) || w.m.includes(q)) : pool();
+  const q = $("search").value;
+  const found = searchWords(q), list = found || pool();
+  lastQ = q;
+  $("searchInfo").hidden = !found;
+  if (found) $("searchInfo").textContent = found.length ? `모고·빠바·교과서 전체에서 ${found.length}개 찾음 (고른 범위와 상관없이)` : "";
   const area = $("listArea");
   area.classList.toggle("hideM", $("hideM").getAttribute("aria-pressed") === "true");
-  if (!list.length) { area.innerHTML = `<div class="empty">찾는 단어가 없어요.</div>`; return; }
+  if (!list.length) { area.innerHTML = `<div class="empty">${found ? `'${esc(q.trim())}'(으)로 찾은 단어가 없어요.<br>철자를 줄여 보거나(예: geronto), 뜻의 일부만 써 보세요.` : "찾는 단어가 없어요."}</div>`; return; }
   const groups = {}; list.forEach(w => { const k = w.src + "|" + w.p; (groups[k] = groups[k] || []).push(w); });
   area.innerHTML = Object.keys(groups).map(k => { const g = groups[k], s = g[0].src, p = g[0].p; return `
     <div class="group"><h3>${esc(s)} ${esc(glabel(s, p))} <span>${g.length}개 · 앎 ${g.filter(w => st(w) === 3).length}</span></h3>
     ${g.map(w => `<div class="item" data-id="${esc(w.id)}">
       <button class="stat" aria-label="상태 바꾸기"><i class="dot s${st(w)}"></i></button>
-      <div class="w">${esc(w.w)}<span class="m">${esc(w.m)}</span></div>
+      <div class="w">${found ? hl(w.w, q) : esc(w.w)}<span class="m">${found ? hl(w.m, q) : esc(w.m)}</span></div>
       <button class="speak" aria-label="발음 듣기">🔊</button>
       <button class="star ${starred(w) ? "on" : ""}" aria-label="별표">★</button>
     </div>`).join("")}</div>`; }).join("");
