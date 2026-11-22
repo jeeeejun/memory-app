@@ -457,7 +457,7 @@ $("backBtn").onclick = () => {
 
 /* ---------- 문제 데이터 ---------- */
 let SHEETS = [], PAIRS = [], ITEM = {};
-const PART = { basic: "기본 원리", art25: "제25항 -히/-이", art5: "제5항 된소리", art11: "제11항 두음 법칙·렬/률", art30: "제30항 사이시옷", spacing: "제41~43항 띄어쓰기" };
+const PART = { basic: "기본 원리", art25: "제25항 -히/-이", art5: "제5항 된소리", art11: "제11항 두음 법칙·렬/률", art30: "제30항 사이시옷", spacing: "제41~43항 띄어쓰기", split: "띄어쓰기 구분" };
 const CARD_PART = { basic: "basic", phon: "basic", art25: "art25", art5: "art5", art11: "art11", art30: "art30", art41: "spacing" };
 const allItems = () => SHEETS.flatMap(s => s.groups.flatMap(g => g.items));
 const wrongItems = () => allItems().filter(it => store.q[it.id] === 0);
