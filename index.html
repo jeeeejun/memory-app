@@ -72,19 +72,32 @@
 
   <!-- 카드 -->
   <section id="tab-cards" class="tab">
+    <div class="cmode hidden" id="cMode" role="group" aria-label="카드 방식">
+      <button data-v="card" aria-pressed="true">카드 넘기기</button>
+      <button data-v="pair" aria-pressed="false">⚖️ 헷갈리는 짝</button>
+    </div>
     <div class="filters">
       <select id="fSubject"></select>
       <select id="fPart" class="partSel"></select>
-      <select id="fScope">
+      <select id="fScope" class="cardOnly">
         <option value="due">오늘 복습할 카드</option>
         <option value="all">전체 카드</option>
         <option value="wrong">몰랐던 카드</option>
         <option value="today">오늘 수업</option>
         <option value="star">★ 표시만</option>
       </select>
-      <label class="chk"><input type="checkbox" id="fShuffle" checked> 섞기</label>
-      <label class="chk"><input type="checkbox" id="fReverse"> 답 보고 문제 맞히기</label>
+      <label class="chk cardOnly"><input type="checkbox" id="fShuffle" checked> 섞기</label>
+      <label class="chk cardOnly"><input type="checkbox" id="fReverse"> 답 보고 문제 맞히기</label>
+      <div class="cmode small pairOnly" id="pOrder" role="group" aria-label="푸는 순서">
+        <button data-v="plain" aria-pressed="true">그냥 하기</button>
+        <button data-v="miss" aria-pressed="false">많이 틀린 것부터</button>
+      </div>
     </div>
+    <div id="pairPane" class="pairOnly">
+      <div id="pairArea"></div>
+      <p class="muted tip">① 빈칸에 맞는 말을 비슷해서 헷갈리는 말들 중에 고르고 ② <b>짝이 된 다른 말</b>은 무엇인지까지 골라야 맞힌 거예요. 틀린 짝은 카드 탭의 '몰랐던 카드'에도 모여요.</p>
+    </div>
+    <div id="cardPane" class="cardOnly">
     <div id="cardBox" class="card">
       <div class="meta" id="cMeta"></div>
       <div class="q" id="cQ"></div>
@@ -101,6 +114,7 @@
     </div>
     <p class="muted center" id="cProgress"></p>
     <button class="btn small ghost" id="cReset">↺ 이 범위 기록 초기화</button>
+    </div>
   </section>
 
   <!-- 마인드맵 (data/mindmap.json 에 뼈대가 있는 과목만) -->
