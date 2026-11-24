@@ -1,5 +1,5 @@
 // 오프라인 실행용. 앱 파일을 고치면 VERSION 숫자를 올리세요.
-const VERSION = 'v36';
+const VERSION = 'v37';
 const SHELL = ['./', './index.html', './style.css', './app.js', './mindmap.js', './mindmap.css', './data/mindmap.json', './data/history-pairs.json', './manifest.json', './icon.svg', './data/cards.json', './data/summaries.json', './data/sources.json', './data/texts.json', './vocab.html', './mogo.html', './english.html', './manage.html', './korean-grammar.html', './data/korean-grammar.json', './data/grammar-sheets.json', './grammar-sheet.html', './hanmun.html', './data/hanmun.json'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL.map(u => new Request(u, { cache: 'reload' }))))); self.skipWaiting(); });
 self.addEventListener('activate', e => {

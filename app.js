@@ -123,7 +123,7 @@ document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.id === 'tab-' + b.dataset.tab));
   $('sheet').classList.remove('show');
   if (!MANAGE) LS.set('ma_tab', b.dataset.tab);
-  if (b.dataset.tab === 'cards') { syncCMode(); cMode === 'pair' ? startPairs(true) : startDeck(true); }
+  if (b.dataset.tab === 'cards') { syncCMode(); startCMode(true); }
   if (b.dataset.tab === 'blank') renderBlank();
   window.scrollTo(0, 0);
   if (b.dataset.tab === 'review') renderReview();
@@ -192,7 +192,7 @@ $('cReset').onclick = () => {
 ['fSubject', 'fScope', 'fShuffle', 'fReverse'].forEach(id => $(id).onchange = () => { LS.set('ma_' + id, $(id).type === 'checkbox' ? $(id).checked : $(id).value); startDeck(); });
 ['fScope', 'fShuffle', 'fReverse'].forEach(id => { const v = LS.get('ma_' + id, null); if (v !== null) $(id).type === 'checkbox' ? $(id).checked = v : $(id).value = v; });
 $('fSubject').addEventListener('change', () => { fillPartSelect($('fPart'), 'fSubject'); startDeck(); });
-$('fPart').onchange = () => { LS.set('ma_fPart', $('fPart').value); cMode === 'pair' ? startPairs() : startDeck(); };
+$('fPart').onchange = () => { LS.set('ma_fPart', $('fPart').value); startCMode(false); };
 $('wSubject').addEventListener('change', () => fillPartSelect($('wPart'), 'wSubject'));
 $('wPart').onchange = () => LS.set('ma_wPart', $('wPart').value);
 
@@ -836,18 +836,18 @@ let pRound = null, pStep = 0, pPick = null;   // pPick = 지금 문제의 보기
 const hasPairs = () => !!(basePairs && basePairs.subject === curSubject && !MANAGE);
 const pGroup = id => basePairs.groups.find(g => g.id === id);
 const pPoint = (g, t) => (g.terms.find(x => x.t === t) || {}).point || '';
+// 카드 탭 방식: card 카드 넘기기 / quiz 4지선다(모든 과목) / pair 헷갈리는 짝(짝 데이터가 있는 과목만)
 function syncCMode() {
-  const on = hasPairs(); if (!on) cMode = 'card';
-  $('cMode').classList.toggle('hidden', !on);
+  if (cMode === 'pair' && !hasPairs()) cMode = 'card';
+  $('cMode').classList.toggle('hidden', MANAGE); $('cModePair').classList.toggle('hidden', !hasPairs());
   $('cMode').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === cMode));
   $('pOrder').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === LS.get('ma_porder', 'plain')));
-  document.querySelectorAll('#tab-cards .cardOnly').forEach(x => x.classList.toggle('hidden', cMode !== 'card'));
-  document.querySelectorAll('#tab-cards .pairOnly').forEach(x => x.classList.toggle('hidden', cMode !== 'pair'));
+  ['card', 'quiz', 'pair'].forEach(m => document.querySelectorAll(`#tab-cards .${m}Only`).forEach(x => { if (!x.className.split(' ').some(k => k === cMode + 'Only')) x.classList.add('hidden'); }));
+  document.querySelectorAll(`#tab-cards .${cMode}Only`).forEach(x => x.classList.remove('hidden'));
 }
-$('cMode').querySelectorAll('button').forEach(b => b.onclick = () => {
-  cMode = b.dataset.v; LS.set('ma_cmode', cMode); syncCMode(); cMode === 'pair' ? startPairs(true) : startDeck(true);
-});
-$('pOrder').querySelectorAll('button').forEach(b => b.onclick = () => { LS.set('ma_porder', b.dataset.v); syncCMode(); startPairs(); });
+function startCMode(resume) { cMode === 'pair' ? startPairs(resume) : cMode === 'quiz' ? startQuiz(resume) : startDeck(resume); }
+$('cMode').querySelectorAll('button').forEach(b => b.onclick = () => { cMode = b.dataset.v; LS.set('ma_cmode', cMode); syncCMode(); startCMode(true); });
+$('pOrder').querySelectorAll('button').forEach(b => b.onclick = () => { LS.set('ma_porder', b.dataset.v); syncCMode(); startCMode(false); });
 function pairPool() { return hasPairs() ? basePairs.qs.filter(q => inPart(q, $('fPart').value)) : []; }
 const pSave = () => LS.set('ma_pround', pRound);
 function startPairs(resume, list) {
@@ -912,6 +912,79 @@ function drawPair() {
       $('pNext').onclick = () => { drawPair(); window.scrollTo({ top: 0 }); }; $('pNext').scrollIntoView({ block: 'nearest' });
     });
   }
+}
+
+/* ===== 4지선다 (카드 탭) =====
+   카드의 q를 보고 a를 4개 중에 고르기. 오답 보기는 다른 카드의 답에서: 같은 소제목 > 같은 단원 > 같은 대단원 순으로 가깝고,
+   연도·숫자 답에는 연도·숫자 답을 섞는다. 질문에 이미 나온 말·정답과 겹치는 말은 빼고 고른다.
+   20문제 묶음, '그냥 하기 / 많이 틀린 것부터'. 기록 ma_quiz = { miss:{카드id: 틀린 횟수} }, 진행 중 묶음 ma_qround(보기도 저장 → 새로고침해도 같은 문제) */
+let qStore = LS.get('ma_quiz', { miss: {} }), qRound = null;
+const QN = 20;
+const qNorm = s => String(s).replace(/[\s·.,'"‘’“”()~\-『』「」→]/g, '').toLowerCase();
+const isNumish = s => /\d/.test(s);
+function quizOptions(c, pool) {
+  const a = qNorm(c.a), q = qNorm(c.q), part = unitPart(c.unit);
+  const seen = new Set([a]), cand = [];
+  pool.forEach(o => {
+    const k = qNorm(o.a);
+    if (!k || seen.has(k) || k.includes(a) || a.includes(k) || q.includes(k)) return;
+    seen.add(k);
+    let s = o.topic && o.topic === c.topic && o.unit === c.unit ? 6 : o.unit === c.unit ? 4 : unitPart(o.unit) === part ? 2 : 0;
+    if (isNumish(o.a) === isNumish(c.a)) s += 2;
+    const r = Math.min(o.a.length, c.a.length) / Math.max(o.a.length, c.a.length); s += r * 2;   // 길이가 비슷할수록
+    cand.push({ a: o.a, s: s + Math.random() * 1.5 });
+  });
+  cand.sort((x, y) => y.s - x.s);
+  return shuffle([c.a, ...cand.slice(0, 3).map(x => x.a)]);
+}
+function quizPool() { return filterCards($('fSubject').value, 'all').filter(c => inPart(c, $('fPart').value)); }
+const qSave = () => LS.set('ma_qround', qRound);
+function startQuiz(resume, list) {
+  const key = $('fSubject').value + '|' + $('fPart').value, saved = LS.get('ma_qround', null), byId = {};
+  allCards().forEach(c => byId[c.id] = c);
+  if (resume && saved && saved.key === key && saved.ids.every(id => byId[id])) { qRound = saved; drawQuiz(); return; }
+  let ids = list;
+  if (!ids) {
+    const pool = shuffle(quizPool()), miss = id => qStore.miss[id] || 0;
+    if (LS.get('ma_porder', 'plain') === 'miss') pool.sort((x, y) => miss(y.id) - miss(x.id));
+    ids = pool.slice(0, QN).map(c => c.id);
+  }
+  qRound = { key, ids: shuffle(ids), done: 0, score: 0, wrong: [], opts: {}, picked: null }; qSave(); drawQuiz();
+}
+function drawQuiz() {
+  const area = $('quizArea'), byId = {}; allCards().forEach(c => byId[c.id] = c);
+  const total = qRound ? qRound.ids.length : 0;
+  if (!total) { area.innerHTML = '<div class="muted center" style="padding:30px 0">이 범위에는 카드가 없어요. 위에서 단원을 바꿔 보세요.</div>'; return; }
+  if (qRound.done >= total) {
+    const wrong = qRound.wrong.map(id => byId[id]).filter(Boolean);
+    area.innerHTML = `<div class="pcard"><div class="pscore">${qRound.score} / ${total}</div>
+      <div class="row" style="justify-content:center">${wrong.length ? `<button class="btn good" id="qRetry">틀린 것만 다시 (${wrong.length})</button>` : ''}<button class="btn" id="qAgain">새로 ${QN}문제</button></div>
+      ${wrong.length ? `<div class="plist">${wrong.map(c => `<div>${esc(c.q)}<small><b>→ ${esc(c.a)}</b></small></div>`).join('')}</div>` : ''}</div>`;
+    if ($('qRetry')) $('qRetry').onclick = () => startQuiz(false, wrong.map(c => c.id));
+    $('qAgain').onclick = () => startQuiz(false); return;
+  }
+  const c = byId[qRound.ids[qRound.done]];
+  if (!qRound.opts[c.id]) { qRound.opts[c.id] = quizOptions(c, quizPool().length >= 8 ? quizPool() : filterCards($('fSubject').value, 'all')); qSave(); }
+  const opts = qRound.opts[c.id], missN = qStore.miss[c.id] || 0, picked = qRound.picked;
+  const meta = `<div class="pmeta"><span>${qRound.done + 1} / ${total}</span><span>${esc(unitTitle(c.unit) || c.unit || '')}${missN ? ` · <b class="wdot">틀림 ${missN}</b>` : ''}</span><span>맞힘 ${qRound.score}</span></div>`;
+  area.innerHTML = `<div class="pcard">${meta}<div class="pq">${esc(c.q)}</div>
+    <div class="popts">${opts.map((o, i) => `<button class="popt" data-i="${i}"${picked != null ? ' disabled' : ''}>${'①②③④'[i]} ${esc(o)}</button>`).join('')}</div><div id="qFb"></div></div>`;
+  const reveal = i => {
+    const ok = opts[i] === c.a;
+    area.querySelectorAll('.popt').forEach(x => { x.disabled = true; if (opts[+x.dataset.i] === c.a) x.classList.add('right'); });
+    if (!ok) area.querySelector(`.popt[data-i="${i}"]`).classList.add('wrong');
+    $('qFb').innerHTML = `<div class="pverdict ${ok ? 'ok' : 'no'}">${ok ? '○ 맞았어요' : '✕ 정답: ' + esc(c.a)}${c.sentence ? `<br><small>${esc(c.sentence)}</small>` : ''}</div>
+      ${c.exp ? `<div class="ptable"><div><b>💡 해설</b><span>${esc(c.exp)}</span></div></div>` : ''}${refHtml(c) ? `<div class="ref">${refHtml(c)}</div>` : ''}
+      <button class="btn good pnext" id="qNext">다음</button>`;
+    $('qNext').onclick = () => { qRound.done++; qRound.picked = null; qSave(); drawQuiz(); window.scrollTo({ top: 0 }); };
+    $('qNext').scrollIntoView({ block: 'nearest' });
+  };
+  if (picked != null) { reveal(picked); return; }   // 새로고침 전에 고른 문제
+  area.querySelectorAll('.popt').forEach(b => b.onclick = () => {
+    const i = +b.dataset.i, ok = opts[i] === c.a;
+    qRound.picked = i; if (ok) qRound.score++; else { qRound.wrong.push(c.id); qStore.miss[c.id] = (qStore.miss[c.id] || 0) + 1; LS.set('ma_quiz', qStore); grade(c.id, false); }
+    qSave(); reveal(i);
+  });
 }
 
 /* ===== 시작 ===== */
