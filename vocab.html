@@ -157,6 +157,22 @@ input[type=text],input[type=search]{width:100%;font:inherit;font-size:1.15rem;pa
 .star{border:0;background:none;font-size:1.3rem;width:36px;height:36px;color:var(--line)}
 .star.on{color:var(--gold)}
 .empty{color:var(--muted);text-align:center;padding:30px 10px}
+/* 지문 전체 보기 */
+.ftext{font-family:var(--serif);font-size:1.08rem;line-height:1.95;margin:0;overflow-wrap:anywhere;text-align:left}
+.ftext .fs{border-radius:4px}
+.ftext .fs.key{background:linear-gradient(transparent 58%,var(--hl) 58%);cursor:pointer}
+.ftext .fs.key.on{background:var(--hl)}
+.ftext sup{font-family:var(--sans);font-size:.68em;font-weight:700;color:var(--red);margin:0 1px}
+.expbar{display:flex;gap:8px}
+.expbar .btn{flex:1}
+.expbar .btn[aria-pressed="false"]{background:transparent;color:var(--ink);border-color:var(--line)}
+.ksent{display:flex;flex-direction:column;gap:12px}
+.ksent > div{border-left:3px solid var(--gold);padding-left:12px;min-width:0}
+.ksent .num{font-weight:700;color:var(--red);margin-right:4px}
+.ksent .en{font-family:var(--serif);font-size:1rem;line-height:1.5;overflow-wrap:anywhere}
+.ksent .nt{font-size:.9rem;color:var(--muted);word-break:keep-all;margin-top:3px}
+.ksent > div.flash{animation:kflash 1.6s ease-out}
+@keyframes kflash{0%,50%{background:var(--hl)}100%{background:transparent}}
 .hsearch input{width:100%}
 .item mark{background:var(--hl);color:inherit;border-radius:3px;padding:0 1px}
 .hideM .item .m mark{background:none}
@@ -905,6 +921,52 @@ mural|벽화
    "be likely to V: ~할 가능성이 높다",
    "run out of money를 ‘돈을 다 써 버리다’로 표시",
    "(A) 첫 단어 These sales → 앞에 ‘파는 행위’가 나와야 함 → (B) 뒤"
+  ],
+  "full": [
+   {
+    "en": "People sometimes worry that a bank will run out of money.",
+    "k": 0
+   },
+   {
+    "en": "So they all panic and try to withdraw their money.",
+    "k": 0
+   },
+   {
+    "en": "This is called a bank run.",
+    "k": -1
+   },
+   {
+    "en": "In some cases, it can cause a bank to go bankrupt.",
+    "k": 1
+   },
+   {
+    "en": "The reason for this is that most banks keep a limited amount of money in their safes.",
+    "k": -1
+   },
+   {
+    "en": "They do this for security purposes.",
+    "k": -1
+   },
+   {
+    "en": "The amount is only a small percentage of the total deposits made by customers.",
+    "k": 5
+   },
+   {
+    "en": "Therefore, if a bank run occurs, the bank must find a way to increase the amount of cash they have on hand.",
+    "k": 2
+   },
+   {
+    "en": "One way that they can do this is by selling their assets.",
+    "k": 3
+   },
+   {
+    "en": "These sales must be done quickly, so the price of the assets is likely to be much lower than normal.",
+    "k": -1
+   },
+   {
+    "en": "This can cause even more customer anxiety, leading to increased withdrawals.",
+    "k": 4
+   }
   ]
  },
  {
@@ -961,6 +1023,36 @@ mural|벽화
    "Although being ill is quite serious: 동명사 주어 being ill",
    "trips to the hospital = 병원 방문 / dress up like ~처럼 차려입다",
    "관계사절 범위 괄호 치기: (these medical clowns create), (who met with clowns)"
+  ],
+  "full": [
+   {
+    "en": "Although being ill is quite serious, some trips to the hospital now include unexpected laughter.",
+    "k": -1
+   },
+   {
+    "en": "Healthcare workers have been dressing up like clowns to help patients relax and reduce the stress staying in the hospital can cause.",
+    "k": 0
+   },
+   {
+    "en": "Evidence suggests the laughter these medical clowns create is as effective as some medication.",
+    "k": 1
+   },
+   {
+    "en": "In one experiment, researchers sent clowns to entertain children being prepared for surgery.",
+    "k": -1
+   },
+   {
+    "en": "One group of kids spent about half an hour with a clown, while a second group of children received a sedative instead.",
+    "k": -1
+   },
+   {
+    "en": "The kids who met with clowns showed the same reduction in anxiety as those who were given the sedative.",
+    "k": 2
+   },
+   {
+    "en": "It is believed that medical clowns could also be used to help kids with autism and young burn victims in need of painful bandage-changing.",
+    "k": 3
+   }
   ]
  },
  {
@@ -1025,6 +1117,52 @@ mural|벽화
    "to game theory: be related to ~와 관련 있다",
    "back down from: 물러서다 → 앞 협력과 대비되는 전략",
    "bear the consequences: 결과를 감당하다(선택지 ⑤)"
+  ],
+  "full": [
+   {
+    "en": "In the 1950s, biologists observed chimpanzees that weren't biologically related sharing meat.",
+    "k": 0
+   },
+   {
+    "en": "They struggled to understand why animals that aren't part of the same family help one another.",
+    "k": -1
+   },
+   {
+    "en": "Today, it is believed that the answer is related to game theory.",
+    "k": -1
+   },
+   {
+    "en": "To understand this concept better, consider the following situation.",
+    "k": -1
+   },
+   {
+    "en": "Tournaments were once held by a political scientist in which computer programs competed against each other.",
+    "k": -1
+   },
+   {
+    "en": "Each program had a specific strategy that it followed when encountering an opponent — cooperating with it, backing down from it, and so on.",
+    "k": 1
+   },
+   {
+    "en": "A strategy emerged over time that was more successful than others: start by being cooperative, and then simply copy your opponents' behavior.",
+    "k": 2
+   },
+   {
+    "en": "In other words, if they cooperate, I cooperate.",
+    "k": -1
+   },
+   {
+    "en": "If they stop sharing with me, I stop sharing with them.",
+    "k": -1
+   },
+   {
+    "en": "The behavior we observe in the animal kingdom that is similar to this is called reciprocity.",
+    "k": 3
+   },
+   {
+    "en": "The chimpanzees share food with others because they believe the other will return the favor.",
+    "k": -1
+   }
   ]
  },
  {
@@ -1089,6 +1227,40 @@ mural|벽화
    "To make things more confusing: 더 헷갈리게도 (내용상 심화 신호)",
    "decided to clearly mark: 매우 선명하게 표시",
    "A = B 구조: all you have to do is (to) V"
+  ],
+  "full": [
+   {
+    "en": "Baarle is a small border village where areas of Belgian land are scattered within the surrounding Dutch territory.",
+    "k": 0
+   },
+   {
+    "en": "To make things more confusing, there are some Belgian areas within the Dutch territory that contain smaller Dutch properties.",
+    "k": 1
+   },
+   {
+    "en": "It is one of only a few places in the world that have such a complicated border.",
+    "k": 2
+   },
+   {
+    "en": "In 1995, the Belgian and Dutch governments decided to clearly mark the unusual border with a line on the ground.",
+    "k": -1
+   },
+   {
+    "en": "If the border line runs through the middle of buildings such as houses and cafes, it cuts them in half, and each part belongs to a different country.",
+    "k": -1
+   },
+   {
+    "en": "Which country do you live in if your house is divided by this line?",
+    "k": -1
+   },
+   {
+    "en": "This is determined by where your front door is!",
+    "k": -1
+   },
+   {
+    "en": "So if the Dutch annoyed you last week, all you have to do is move your front door to relocate to Belgium.",
+    "k": 3
+   }
   ]
  },
  {
@@ -1150,6 +1322,44 @@ mural|벽화
    "by remaining: 수단·방법 (필기)",
    "대개 순서 문제는 지시어 this movement / This / They로 연결",
    "civil rights 시민권 / sit-in 연좌시위 / segregate 분리하다"
+  ],
+  "full": [
+   {
+    "en": "The sit-in movement was part of the struggle for racial equality in the US.",
+    "k": -1
+   },
+   {
+    "en": "Its goal was to end the forced separation of races in public places.",
+    "k": -1
+   },
+   {
+    "en": "One of the most important events of this movement was the moment when some African American college students sat in a segregated section of a restaurant in North Carolina.",
+    "k": 0
+   },
+   {
+    "en": "They were told to leave, but they protested by remaining in their seats.",
+    "k": 1
+   },
+   {
+    "en": "This was not the first sit-in of the civil rights movement, but it led to a series of similar protests.",
+    "k": -1
+   },
+   {
+    "en": "During them, protesters occupied seats in places where races were segregated, including restaurants and libraries.",
+    "k": 2
+   },
+   {
+    "en": "They refused to move unless they were either served or arrested.",
+    "k": -1
+   },
+   {
+    "en": "Many establishments decided to end their practice of racial segregation rather than deal with more protests.",
+    "k": 3
+   },
+   {
+    "en": "These sit-ins helped pass the Civil Rights Act of 1964, which officially ended segregation in public places.",
+    "k": 4
+   }
   ]
  },
  {
@@ -1210,6 +1420,36 @@ mural|벽화
    "vicious cycle 악순환",
    "S+V+O, thereby V-ing (필기한 구조)",
    "once in a while = 가끔 (필기)"
+  ],
+  "full": [
+   {
+    "en": "Insomnia sufferers face a vicious cycle.",
+    "k": -1
+   },
+   {
+    "en": "First, they fail to sleep well for a few nights in a row, and then they begin to experience stress about their lack of sleep.",
+    "k": -1
+   },
+   {
+    "en": "This stress, in turn, leads to further trouble sleeping.",
+    "k": 0
+   },
+   {
+    "en": "While many patients feel medication is the only remedy for their problem, doctors disagree.",
+    "k": 1
+   },
+   {
+    "en": "They believe that a psychological condition is often responsible for insomnia.",
+    "k": -1
+   },
+   {
+    "en": "This condition can be treated with cognitive behavioral therapy, which focuses on changing the way these people think about insomnia, thereby enabling a change in behavior.",
+    "k": 2
+   },
+   {
+    "en": "The therapy involves showing patients that they can still be healthy even if they fail to get a good night's sleep once in a while.",
+    "k": 3
+   }
   ]
  },
  {
@@ -1269,6 +1509,48 @@ mural|벽화
    "Following = ~ 후에 (전치사처럼 해석)",
    "계속적 용법 which의 선행사가 앞 명사구 전체인지 확인 [해석기법 28]",
    "내용 불일치는 연도·전후 관계(before/after) 함정 주의"
+  ],
+  "full": [
+   {
+    "en": "Grace Hopper was born in New York in 1906.",
+    "k": -1
+   },
+   {
+    "en": "She showed an interest in mechanics at an early age, often taking apart appliances and putting them back together.",
+    "k": 0
+   },
+   {
+    "en": "She earned degrees in mathematics and physics at Vassar College and later received a PhD in mathematics from Yale.",
+    "k": -1
+   },
+   {
+    "en": "Upon graduating, she returned to Vassar as a professor.",
+    "k": -1
+   },
+   {
+    "en": "Following the attack on Pearl Harbor in 1941, which caused the US to enter World War II, Hopper joined the military.",
+    "k": 1
+   },
+   {
+    "en": "In 1944, she was assigned to a computer project at Harvard University.",
+    "k": -1
+   },
+   {
+    "en": "Her team helped create an early version of an electronic computer.",
+    "k": -1
+   },
+   {
+    "en": "After the war, she took part in the creation of UNIVAC, the first all-electronic digital computer.",
+    "k": 2
+   },
+   {
+    "en": "She eventually reached the rank of commander and was recognized internationally for her work with computers.",
+    "k": -1
+   },
+   {
+    "en": "In 1973, she became the first woman to be named a distinguished fellow of the British Computer Society.",
+    "k": 3
+   }
   ]
  },
  {
@@ -1323,6 +1605,36 @@ mural|벽화
    "reaching 옆 ‘reach 뒤에 to X’ 필기: reach는 타동사 → reach Pompeii (to 없이)",
    "문장에 동사가 있는지 먼저 확인하는 습관",
    "as rock and lava began to be expelled: as = ~할 때"
+  ],
+  "full": [
+   {
+    "en": "Mount Vesuvius is a volcano in Italy that had been inactive for hundreds of years until August 24, 79 A.D., when it suddenly erupted.",
+    "k": 0
+   },
+   {
+    "en": "The eruption began in the morning, as rock and lava began to be expelled at an amazing rate of 1.5 million tons per second.",
+    "k": -1
+   },
+   {
+    "en": "The sky darkened and about six inches of ash fell to the ground each hour.",
+    "k": -1
+   },
+   {
+    "en": "The lava started to flow around midnight, and the next morning a cloud of toxic gas reached Pompeii, where around 20,000 people lived.",
+    "k": 1
+   },
+   {
+    "en": "At the time, the region was a popular resort spot, with many tourists.",
+    "k": -1
+   },
+   {
+    "en": "Most of the people who did not leave at the start of the eruption were buried alive in rock and ash.",
+    "k": 2
+   },
+   {
+    "en": "In the end, it is believed that approximately 16,000 people died.",
+    "k": -1
+   }
   ]
  },
  {
@@ -1389,6 +1701,48 @@ mural|벽화
    "Not only 도치 구문 표시",
    "butterflies fluttering around her stomach = 긴장된 상태의 비유",
    "It's now or never: 지금 아니면 안 된다"
+  ],
+  "full": [
+   {
+    "en": "On the day of her big audition, Fiona waited outside the theater, looking at the closed doors.",
+    "k": 0
+   },
+   {
+    "en": "Terrifying thoughts ran through her head: \"Am I good enough? What if I forget my lines?\"",
+    "k": -1
+   },
+   {
+    "en": "It felt like a million butterflies were fluttering around her stomach.",
+    "k": -1
+   },
+   {
+    "en": "Suddenly, the doors swung open, and someone called her name.",
+    "k": -1
+   },
+   {
+    "en": "Walking in, Fiona relaxed a bit.",
+    "k": 1
+   },
+   {
+    "en": "\"It's now or never,\" she whispered, trying to make herself feel brave.",
+    "k": -1
+   },
+   {
+    "en": "Standing on the stage and saying her lines, she began to feel sure of herself again.",
+    "k": 2
+   },
+   {
+    "en": "Not only did she recite every line perfectly, but she also delivered them with immense passion.",
+    "k": 3
+   },
+   {
+    "en": "Coming off the stage, she couldn't help but smile.",
+    "k": 4
+   },
+   {
+    "en": "\"I did it. I really did it,\" she thought, surprised at how the audition had gone.",
+    "k": 5
+   }
   ]
  },
  {
@@ -1453,6 +1807,40 @@ mural|벽화
    "can be turned back into a tree: 다시 ~으로 되돌아가다 (필기)",
    "Made from ~ 분사구문 표시",
    "encourage O to V: ~하도록 권장하다"
+  ],
+  "full": [
+   {
+    "en": "Despite the popularity of e-books, most kids still prefer printed books.",
+    "k": -1
+   },
+   {
+    "en": "Unfortunately, making printed books means cutting down trees.",
+    "k": 0
+   },
+   {
+    "en": "But an Argentine children's book called My Father Was in the Jungle can actually be turned back into a tree.",
+    "k": -1
+   },
+   {
+    "en": "Made from acid-free paper and with non-toxic ink, the entire book is environment-friendly.",
+    "k": 1
+   },
+   {
+    "en": "Seeds are also sewn into the book's pages, so it can be transformed into a tree.",
+    "k": 2
+   },
+   {
+    "en": "Once they finish reading the book, children are encouraged to water its cover and put it in a sunny spot.",
+    "k": -1
+   },
+   {
+    "en": "Placing the book in the dirt when the seeds begin to sprout, children can grow it like any other plant.",
+    "k": 3
+   },
+   {
+    "en": "Although this is just a one-time project, the publisher hopes it will make people aware of the resources needed to produce everyday items such as books.",
+    "k": 4
+   }
   ]
  },
  {
@@ -1521,6 +1909,40 @@ mural|벽화
    "undergo: 겪다 / trauma: 외상 (필기)",
    "established = 정착하다 (필기)",
    "삽입 문제: This가 가리키는 대상이 바로 앞에 있는지 확인"
+  ],
+  "full": [
+   {
+    "en": "Tree transplant shock is a condition that occurs when a tree undergoes stress or trauma after being moved to a new location.",
+    "k": 0
+   },
+   {
+    "en": "Symptoms of tree transplant shock include slower growth, which can potentially lead to death.",
+    "k": 1
+   },
+   {
+    "en": "Removed from its original location, a young tree can be expected to retain only about 15% of its root system.",
+    "k": 2
+   },
+   {
+    "en": "This reduces its ability to absorb water and nutrients from the soil.",
+    "k": -1
+   },
+   {
+    "en": "There are, however, ways to deal with this, such as transplanting only trees that are native to the region.",
+    "k": -1
+   },
+   {
+    "en": "Better suited to deal with the local climate and soils, these trees will develop new roots more quickly.",
+    "k": 3
+   },
+   {
+    "en": "Both before and after the transplant, be sure to provide the tree with plenty of water.",
+    "k": -1
+   },
+   {
+    "en": "Once successfully transplanted, the tree will require regular watering until it has become firmly established in its new location.",
+    "k": 4
+   }
   ]
  },
  {
@@ -1575,6 +1997,36 @@ mural|벽화
    "Earlier this week = 이번 주 초 (필기)",
    "role-playing = 역할 놀이 (필기)",
    "keep their teeth clean: 5형식 O.C (필기)"
+  ],
+  "full": [
+   {
+    "en": "Earlier this week, our students welcomed Dr. Turner, a local dentist from the Randolph Dental Clinic nearby.",
+    "k": -1
+   },
+   {
+    "en": "The goal of his visit was to improve the students' understanding of the importance of dental health.",
+    "k": -1
+   },
+   {
+    "en": "They were extremely interested and asked Dr. Turner a number of questions.",
+    "k": -1
+   },
+   {
+    "en": "After the question-and-answer session, the students participated in a role-playing activity.",
+    "k": -1
+   },
+   {
+    "en": "They took turns playing the role of a dentist, even putting on a mask and gloves.",
+    "k": 0
+   },
+   {
+    "en": "Having completed the experience, each student received a gift bag filled with useful items for keeping their teeth clean and healthy.",
+    "k": 1
+   },
+   {
+    "en": "Encouraged by the visiting dentist to practice proper dental care at home, they are all likely to take better care of their teeth than ever before.",
+    "k": 2
+   }
   ]
  },
  {
@@ -1629,6 +2081,40 @@ mural|벽화
    "playing days being behind him = 선수 생활을 끝내고 (필기)",
    "quarterback 쿼터백 / championship 우승",
    "불일치 문제: 선택지 ⑤ ‘병행하며’ 같은 시점 왜곡 주의"
+  ],
+  "full": [
+   {
+    "en": "Fritz Pollard was an American football player and coach who broke many boundaries throughout his career.",
+    "k": -1
+   },
+   {
+    "en": "It started when he joined the Brown University football team in 1915.",
+    "k": -1
+   },
+   {
+    "en": "Being African American, Pollard wasn't accepted by his teammates at first.",
+    "k": 0
+   },
+   {
+    "en": "However, his skill and charisma changed their minds, and Pollard led Brown to a record of eight wins and one loss the following year.",
+    "k": -1
+   },
+   {
+    "en": "In 1920, Pollard became the first African American quarterback in the pro football league and won the championship with his team, the Akron Pros.",
+    "k": -1
+   },
+   {
+    "en": "The next year, he became the first African American head coach in the National Football League, and he continued to coach and play until 1926.",
+    "k": 1
+   },
+   {
+    "en": "His playing days being behind him, Pollard then organized and began coaching the Chicago Black Hawks, an all-African American professional football team, in 1928.",
+    "k": 2
+   },
+   {
+    "en": "Pollard finally retired from football in 1937.",
+    "k": -1
+   }
   ]
  },
  {
@@ -1693,6 +2179,40 @@ mural|벽화
    "news → 단수 V (필기)",
    "감정동사 분사: 사람이 느끼면 p.p.(interested), 사물이 유발하면 V-ing(interesting)",
    "response 대답 / nature 천성 / blame ~을 탓하다"
+  ],
+  "full": [
+   {
+    "en": "Imagine that you ask a man for directions, and he gives you a rude response.",
+    "k": -1
+   },
+   {
+    "en": "You will probably assume that he has an unpleasant personality.",
+    "k": -1
+   },
+   {
+    "en": "In fact, though, he might have just received some terrible news that has seriously affected his mood.",
+    "k": 0
+   },
+   {
+    "en": "His response may have resulted from these circumstances, not from his true nature.",
+    "k": -1
+   },
+   {
+    "en": "It is quite common to blame someone's personality without considering situational factors that may have contributed to his or her actions.",
+    "k": 1
+   },
+   {
+    "en": "What is especially interesting is that, while we often do this to other people, we rarely do it to ourselves.",
+    "k": 2
+   },
+   {
+    "en": "When looking at our own actions, we always believe that we have good reasons for the things we do.",
+    "k": 3
+   },
+   {
+    "en": "However, we are quick to judge others negatively while ignoring possible contributing factors.",
+    "k": 4
+   }
   ]
  },
  {
@@ -1760,6 +2280,36 @@ mural|벽화
    "orientation = 방향 / generalization = 일반화",
    "whether ~ directly or from the side: 정면이든 옆이든",
    "무관한 문장: 소재(tiger)는 같지만 초점(포식자의 시선)이 다른 문장 찾기"
+  ],
+  "full": [
+   {
+    "en": "Young children write with all their attention focused on each letter.",
+    "k": 0
+   },
+   {
+    "en": "Despite this, it's common for them to write some of the letters backwards.",
+    "k": -1
+   },
+   {
+    "en": "This is called \"mirror writing,\" and it may be caused by the way our brains store images, known as \"mirror generalization.\"",
+    "k": -1
+   },
+   {
+    "en": "When we remember images, we focus on shape rather than orientation.",
+    "k": -1
+   },
+   {
+    "en": "This is because early humans needed to be able to recognize a dangerous predator, such as a tiger, from any angle.",
+    "k": 1
+   },
+   {
+    "en": "Therefore, whether we're looking at a tiger directly or from the side, we still immediately know it's a tiger.",
+    "k": -1
+   },
+   {
+    "en": "It is believed that mirror generalization, combined with a child's weak understanding of right and left, is what causes the occasional backward letter.",
+    "k": 3
+   }
   ]
  },
  {
@@ -1823,6 +2373,40 @@ mural|벽화
    "that of a predator: that = appearance (필기)",
    "stay away: 가까이 오지 않다, 멀리하다 (필기)",
    "삽입 문제에서 also는 ‘앞 내용 + 추가’ 신호"
+  ],
+  "full": [
+   {
+    "en": "With predators hiding around every corner, it's not easy for many animals to survive in the wild.",
+    "k": 0
+   },
+   {
+    "en": "That's why some have developed camouflage to trick their predators.",
+    "k": -1
+   },
+   {
+    "en": "The caterpillar of a moth called Hemeroplanes triptolemus, found in many areas of Africa and South America, is one example.",
+    "k": -1
+   },
+   {
+    "en": "It mimics a snake to scare away birds, which like to eat the caterpillars but are preyed upon by snakes.",
+    "k": 1
+   },
+   {
+    "en": "The snake caterpillar does this by inflating its front part to form a diamond-shaped head.",
+    "k": -1
+   },
+   {
+    "en": "When it does this, eye-shaped markings on its head get bigger, making the caterpillar look like a snake with large eyes.",
+    "k": 2
+   },
+   {
+    "en": "With the caterpillar's camouflage giving it a frightening appearance like that of a predator, the birds stay away.",
+    "k": 3
+   },
+   {
+    "en": "It can also move its body like a striking snake, even though it can't bite and isn't poisonous.",
+    "k": -1
+   }
   ]
  },
  {
@@ -1945,6 +2529,7 @@ mural|벽화
     <a class="mtile" href="#spell" data-t="spell"><span class="ic">✍️</span><b>철자</b><small>뜻 보고 영어로 쓰기</small></a>
     <a class="mtile" href="#list" data-t="list"><span class="ic">📖</span><b>단어장</b><small>목록·검색·뜻 가리기</small></a>
     <a class="mtile" href="#study" data-t="study"><span class="ic">📰</span><b>지문 학습</b><small>빠바 지문 흐름·해석</small></a>
+    <a class="mtile" href="#full" data-t="full"><span class="ic">📄</span><b>지문 전체 보기</b><small>빠바 지문 본문 + 해설 보기/보지 않기</small></a>
     <a class="mtile" href="mogo.html#map"><span class="ic">🧠</span><b>모고 마인드맵</b><small>모고 지문 내용을 가지로 외우기</small></a>
     <a class="mtile" href="mogo.html#flow"><span class="ic">➡️</span><b>모고 흐름</b><small>모고 지문을 순서대로 외우기</small></a>
     <a class="mtile" href="english.html"><span class="ic">📝</span><b>영어 복습</b><small>어형변화 오답</small></a>
@@ -2069,6 +2654,15 @@ mural|벽화
     </div>
     <div id="studyArea"></div>
   </section>
+
+  <!-- FULL (빠바 지문 전체 보기) -->
+  <section class="panel" id="p-full" hidden>
+    <div>
+      <div class="label">빠바 지문</div>
+      <div class="chips" id="fchips"></div>
+    </div>
+    <div id="fullArea"></div>
+  </section>
 </div>
 
 <script src="mindmap.js"></script>
@@ -2186,7 +2780,7 @@ seg("srcSeg", v => setSource(v));
 
 /* ---------- tabs ---------- */
 /* 홈(메뉴) ↔ 페이지: 주소 #card 처럼 바뀌어서 뒤로 가기(스와이프)도 됨 */
-const PAGES = { card: "카드", quiz: "4지선다", spell: "철자", list: "단어장", study: "지문 학습" };
+const PAGES = { card: "카드", quiz: "4지선다", spell: "철자", list: "단어장", study: "지문 학습", full: "지문 전체" };
 let tab = "home", fromHome = false;
 function render(t) {
   if (!PAGES[t]) t = "home";
@@ -2196,13 +2790,14 @@ function render(t) {
   Object.keys(PAGES).forEach(k => $("p-" + k).hidden = k !== t);
   if (t !== "home") {
     $("pageTitle").textContent = PAGES[t];
-    $("pageScope").textContent = t === "study" ? "" : $("count").textContent;
+    $("pageScope").textContent = t === "study" || t === "full" ? "" : $("count").textContent;
   }
   if (t === "card") startCards();
   if (t === "quiz") startQuiz();
   if (t === "spell") startSpell();
   if (t === "list") renderList();
   if (t === "study") renderStudy();
+  if (t === "full") renderFull();
   window.scrollTo(0, 0);
 }
 // 누르면 바로 그 페이지를 그림 (hashchange에만 기대지 않음: 아이폰 Safari에서 안 넘어가던 문제)
@@ -2435,6 +3030,71 @@ $("listArea").addEventListener("click", e => {
   else if (e.target.closest(".speak")) speak(w.w);
   else if (e.target.closest(".star")) { store.star[w.id] = !starred(w); save(); e.target.closest(".star").classList.toggle("on", starred(w)); }
   else item.classList.toggle("peek");
+});
+
+/* ---------- FULL (빠바 지문 전체 보기) ----------
+   본문은 passage-data 의 "full" (tools/bbaba_full.py 가 빠바 7·8과 어형변화 학습지 본문에서 만든다).
+   아래 '해설 보지 않기 / 해설 보기': 해설을 켜면 핵심 문장에 형광과 번호가 붙고, 본문 아래에 정답·근거, 주제, 글의 구조, 요약, 핵심 문장 구문, 필기가 나온다. */
+const FULLS = PASSAGES.filter(p => Array.isArray(p.full) && p.full.length);
+function renderFull() {
+  if (!FULLS.some(p => p.id === store.fullCur)) store.fullCur = FULLS.length ? FULLS[0].id : null;
+  const idx = FULLS.findIndex(p => p.id === store.fullCur), p = FULLS[idx], exp = !!store.fullExp;
+  $("fchips").innerHTML = FULLS.map(x => `<button class="chip" data-id="${esc(x.id)}" aria-pressed="${x.id === store.fullCur}">${esc(x.id)}</button>`).join("");
+  $("pageScope").textContent = p ? `${idx + 1} / ${FULLS.length}` : "";
+  if (!p) { $("fullArea").innerHTML = `<div class="empty">지문 데이터가 없어요.</div>`; return; }
+  const keys = p.sentences || [], nums = {};
+  let n = 0; p.full.forEach(f => { if (f.k >= 0 && !(f.k in nums)) nums[f.k] = ++n; });
+  const text = p.full.map(f => {
+    const key = exp && f.k >= 0;
+    return `<span class="fs${key ? " key" : ""}"${key ? ` data-k="${f.k}"` : ""}>${key ? `<sup>${nums[f.k]}</sup>` : ""}${esc(f.en)}</span>`;
+  }).join(" ");
+  const order = Object.keys(nums).map(Number).sort((a, b) => nums[a] - nums[b]);
+  const expHtml = !exp ? "" : `
+    <article class="sheet">
+      <div class="sec"><h4>정답 · 근거</h4><div class="ansbox"><b>${esc(p.type)} · 정답 ${esc(p.answer)}</b><p>${esc(p.why)}</p></div></div>
+      <div class="sec"><h4>주제</h4><p class="summary">${esc(p.topic)}</p></div>
+      <div class="sec"><h4>글의 구조</h4><ol class="flow">${(p.structure || []).map(x => `<li><span class="tg">${esc(x.tag)}</span><span class="tx">${esc(x.text)}</span></li>`).join("")}</ol></div>
+      <div class="sec"><h4>내용 요약</h4><p class="summary">${esc(p.summary)}</p></div>
+      <div class="sec"><h4>핵심 문장 · 구문</h4><div class="ksent">${order.map(k => `<div id="kn${k}"><div class="en"><span class="num">${nums[k]}</span>${esc(keys[k].en)}</div><div class="nt">${esc(keys[k].note)}</div></div>`).join("")}</div></div>
+      ${(p.notes || []).length ? `<div class="sec"><h4>원문 필기 · 추가 학습</h4><ul class="notes">${p.notes.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>` : ""}
+    </article>`;
+  $("fullArea").innerHTML = `
+    <article class="sheet">
+      <div>
+        <div class="kicker">빠바 ${esc(p.chapter)} · ${esc(p.page)} · ${esc(p.type)}</div>
+        <h2>${esc(p.id)}${exp ? " " + esc(p.topic) : ""}</h2>
+      </div>
+      <p class="ftext">${text}</p>
+      <div class="row"><button class="speak" id="fSpeak" aria-label="지문 듣기">🔊</button><span class="tip">지문 전체 듣기</span></div>
+    </article>
+    <div class="expbar" role="group" aria-label="해설">
+      <button class="btn" data-exp="0" aria-pressed="${!exp}">해설 보지 않기</button>
+      <button class="btn" data-exp="1" aria-pressed="${exp}">해설 보기</button>
+    </div>
+    ${exp ? `<p class="tip">형광 문장(번호)을 누르면 아래 그 문장의 구문 설명으로 가요.</p>` : `<p class="tip">먼저 해설 없이 읽고 내용을 떠올려 본 뒤, <b>해설 보기</b>로 확인하세요.</p>`}
+    ${expHtml}
+    <div class="pnav">
+      <button class="btn ghost" id="fPrev" ${idx <= 0 ? "disabled" : ""}>← 이전 지문</button>
+      <button class="btn ghost" id="fNext" ${idx >= FULLS.length - 1 ? "disabled" : ""}>다음 지문 →</button>
+    </div>`;
+  $("fPrev").onclick = () => { store.fullCur = FULLS[idx - 1].id; save(); renderFull(); window.scrollTo({ top: 0 }); };
+  $("fNext").onclick = () => { store.fullCur = FULLS[idx + 1].id; save(); renderFull(); window.scrollTo({ top: 0 }); };
+  $("fSpeak").onclick = () => { try { const u = new SpeechSynthesisUtterance(p.full.map(f => f.en).join(" ")); u.lang = "en-US"; u.rate = .9; speechSynthesis.cancel(); speechSynthesis.speak(u); } catch (e) {} };
+  const on = $("fchips").querySelector('[aria-pressed="true"]'); if (on) on.scrollIntoView({ block: "nearest", inline: "center" });
+}
+$("fchips").addEventListener("click", e => {
+  const b = e.target.closest(".chip"); if (!b) return;
+  store.fullCur = b.dataset.id; save(); renderFull();
+});
+$("fullArea").addEventListener("click", e => {
+  const t = e.target.closest("[data-exp]");
+  if (t) { const y = window.scrollY; store.fullExp = t.dataset.exp === "1"; save(); renderFull(); window.scrollTo({ top: y }); return; }
+  const k = e.target.closest(".fs.key");
+  if (k) {
+    const box = $("kn" + k.dataset.k); if (!box) return;
+    box.scrollIntoView({ block: "center", behavior: "smooth" });
+    box.classList.remove("flash"); void box.offsetWidth; box.classList.add("flash");
+  }
 });
 
 /* ---------- STUDY (지문 학습) ---------- */
