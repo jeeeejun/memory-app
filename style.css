@@ -222,3 +222,32 @@ select,textarea,input,.scard textarea{font-size:16px!important}
 #mmLevels .lv b{font-size:13.5px}
 #mmBox{margin-top:10px;padding-bottom:20px}
 #mmBox .ref{margin-top:6px}
+/* 카드 탭: 카드 넘기기 / 헷갈리는 짝 */
+.cmode{display:flex;background:var(--surface2);border-radius:14px;padding:4px;gap:4px;margin:8px 0 2px}
+.cmode button{flex:1;border:0;background:none;color:var(--muted);font:inherit;font-size:14.5px;font-weight:700;padding:9px 6px;border-radius:11px;cursor:pointer;touch-action:manipulation}
+.cmode button[aria-pressed="true"]{background:var(--surface);color:var(--text);box-shadow:var(--shadow)}
+.cmode.small{margin:0;flex:1 1 230px}.cmode.small button{font-size:13px;padding:7px 6px}
+.pcard{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:18px 16px;display:flex;flex-direction:column;gap:12px;box-shadow:var(--shadow)}
+.pmeta{display:flex;justify-content:space-between;gap:8px;color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
+.pstep{font-size:13px;font-weight:800;color:var(--accent)}
+.pq{font-size:18px;line-height:1.75;word-break:keep-all}
+.pq u,.pverdict u{text-decoration:none;border-bottom:2px solid var(--accent);font-weight:800;padding:0 2px}
+.pq .pgap{display:inline-block;min-width:4.5em}
+.popts{display:flex;flex-direction:column;gap:8px}
+.popt{text-align:left;font:inherit;font-size:16px;font-weight:600;color:var(--text);background:var(--surface2);border:1.5px solid var(--line);border-radius:13px;padding:13px 14px;cursor:pointer;word-break:keep-all;touch-action:manipulation}
+.popt.why{font-size:14.5px;font-weight:500;line-height:1.5}
+.popt.right{background:var(--ok-bg);border-color:var(--ok-line);color:var(--ok-fg);font-weight:700}
+.popt.wrong{background:var(--no-bg);border-color:var(--no-line);color:var(--no-fg)}
+.popt:disabled{cursor:default}
+.pverdict{border-radius:12px;padding:10px 12px;font-size:15.5px;line-height:1.6;word-break:keep-all}
+.pverdict.ok{background:var(--ok-bg);color:var(--ok-fg)}.pverdict.no{background:var(--no-bg);color:var(--no-fg)}
+.ptable{display:flex;flex-direction:column;gap:2px;border-radius:12px;overflow:hidden;border:1px solid var(--line)}
+.ptable div{display:grid;grid-template-columns:7.5em 1fr;gap:10px;padding:8px 11px;background:var(--surface2);font-size:13.5px;line-height:1.5;word-break:keep-all}
+.ptable div.is-a{background:var(--see-bg);color:var(--see-fg)}
+.pnext{width:100%;padding:15px 0}
+.pscore{font-size:34px;font-weight:800;text-align:center;font-variant-numeric:tabular-nums}
+.plist{display:flex;flex-direction:column;gap:8px}
+.plist div{background:var(--surface2);border-radius:12px;padding:10px 12px;font-size:14.5px;line-height:1.6;word-break:keep-all}
+.plist small{display:block;color:var(--muted);font-size:12.5px;margin-top:2px}
+/* 긴 단원 이름 때문에 선택 상자가 화면 밖으로 넘치지 않게 */
+.filters select{max-width:100%;min-width:0;text-overflow:ellipsis}
