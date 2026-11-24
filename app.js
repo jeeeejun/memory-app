@@ -123,7 +123,7 @@ document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.id === 'tab-' + b.dataset.tab));
   $('sheet').classList.remove('show');
   if (!MANAGE) LS.set('ma_tab', b.dataset.tab);
-  if (b.dataset.tab === 'cards') startDeck(true);
+  if (b.dataset.tab === 'cards') { syncCMode(); cMode === 'pair' ? startPairs(true) : startDeck(true); }
   if (b.dataset.tab === 'blank') renderBlank();
   window.scrollTo(0, 0);
   if (b.dataset.tab === 'review') renderReview();
@@ -192,7 +192,7 @@ $('cReset').onclick = () => {
 ['fSubject', 'fScope', 'fShuffle', 'fReverse'].forEach(id => $(id).onchange = () => { LS.set('ma_' + id, $(id).type === 'checkbox' ? $(id).checked : $(id).value); startDeck(); });
 ['fScope', 'fShuffle', 'fReverse'].forEach(id => { const v = LS.get('ma_' + id, null); if (v !== null) $(id).type === 'checkbox' ? $(id).checked = v : $(id).value = v; });
 $('fSubject').addEventListener('change', () => { fillPartSelect($('fPart'), 'fSubject'); startDeck(); });
-$('fPart').onchange = () => { LS.set('ma_fPart', $('fPart').value); startDeck(); };
+$('fPart').onchange = () => { LS.set('ma_fPart', $('fPart').value); cMode === 'pair' ? startPairs() : startDeck(); };
 $('wSubject').addEventListener('change', () => fillPartSelect($('wPart'), 'wSubject'));
 $('wPart').onchange = () => LS.set('ma_wPart', $('wPart').value);
 
@@ -827,6 +827,93 @@ document.querySelectorAll('#mmLevels .lv').forEach(b => b.onclick = () => {
   mmDepth[curSubject] = +b.dataset.d; LS.set('ma_mmdepth', mmDepth); mm.expandTo(+b.dataset.d, +b.dataset.d >= 5); mmSyncLevels();
 });
 
+/* ===== 헷갈리는 짝 (카드 탭) =====
+   data/history-pairs.json (tools/history_pairs.py): groups = 헷갈리는 말 묶음 + 말마다 구별 포인트, qs = 카드 문장의 그 말 자리를 빈칸(___)으로 만든 문제
+   ① 빈칸에 맞는 말 고르기 (정답 + 같은 묶음의 말 최대 3개) → ② "그럼 「보기에 있던 다른 말」은?" 구별 포인트 고르기. 둘 다 맞혀야 1점.
+   기록 ma_pairs = { miss:{문제id: 틀린 횟수}, last:{문제id: 1|0} }, 진행 중인 묶음 ma_pround (새로고침해도 이어짐) */
+let basePairs = null, cMode = LS.get('ma_cmode', 'card'), pStore = LS.get('ma_pairs', { miss: {}, last: {} });
+let pRound = null, pStep = 0, pPick = null;   // pPick = 지금 문제의 보기·② 대상
+const hasPairs = () => !!(basePairs && basePairs.subject === curSubject && !MANAGE);
+const pGroup = id => basePairs.groups.find(g => g.id === id);
+const pPoint = (g, t) => (g.terms.find(x => x.t === t) || {}).point || '';
+function syncCMode() {
+  const on = hasPairs(); if (!on) cMode = 'card';
+  $('cMode').classList.toggle('hidden', !on);
+  $('cMode').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === cMode));
+  $('pOrder').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === LS.get('ma_porder', 'plain')));
+  document.querySelectorAll('#tab-cards .cardOnly').forEach(x => x.classList.toggle('hidden', cMode !== 'card'));
+  document.querySelectorAll('#tab-cards .pairOnly').forEach(x => x.classList.toggle('hidden', cMode !== 'pair'));
+}
+$('cMode').querySelectorAll('button').forEach(b => b.onclick = () => {
+  cMode = b.dataset.v; LS.set('ma_cmode', cMode); syncCMode(); cMode === 'pair' ? startPairs(true) : startDeck(true);
+});
+$('pOrder').querySelectorAll('button').forEach(b => b.onclick = () => { LS.set('ma_porder', b.dataset.v); syncCMode(); startPairs(); });
+function pairPool() { return hasPairs() ? basePairs.qs.filter(q => inPart(q, $('fPart').value)) : []; }
+const pSave = () => LS.set('ma_pround', pRound);
+function startPairs(resume, list) {
+  const key = curSubject + '|' + $('fPart').value, saved = LS.get('ma_pround', null), byId = {};
+  (basePairs ? basePairs.qs : []).forEach(q => byId[q.id] = q);
+  pStep = 0; pPick = null;
+  if (resume && saved && saved.key === key && saved.ids.every(id => byId[id])) { pRound = saved; drawPair(); return; }
+  let ids = list;
+  if (!ids) {
+    const pool = shuffle(pairPool()), miss = id => pStore.miss[id] || 0;
+    if (LS.get('ma_porder', 'plain') === 'miss') pool.sort((x, y) => miss(y.id) - miss(x.id));
+    ids = pool.slice(0, 12).map(q => q.id);
+  }
+  pRound = { key, ids: shuffle(ids), done: 0, score: 0, wrong: [] }; pSave(); drawPair();
+}
+function pairRecord(q, ok) {
+  pStore.last[q.id] = ok ? 1 : 0;
+  if (!ok) { pStore.miss[q.id] = (pStore.miss[q.id] || 0) + 1; grade(q.card, false); }  // 틀린 짝 → 카드 탭 '몰랐던 카드'에도
+  LS.set('ma_pairs', pStore);
+}
+function drawPair() {
+  const area = $('pairArea'), byId = {}; basePairs.qs.forEach(q => byId[q.id] = q);
+  const total = pRound ? pRound.ids.length : 0;
+  if (!total) { area.innerHTML = '<div class="empty muted center" style="padding:30px 0">이 범위에는 헷갈리는 짝 문제가 없어요. 위에서 단원을 바꿔 보세요.</div>'; return; }
+  const filled = (q, word) => esc(q.s).replace(/___/g, word);
+  if (pRound.done >= total) {
+    const wrong = pRound.wrong.map(id => byId[id]).filter(Boolean);
+    area.innerHTML = `<div class="pcard"><div class="pscore">${pRound.score} / ${total}</div>
+      <p class="muted center" style="margin:0">빈칸과 짝 구별을 둘 다 맞혀야 1점이에요.</p>
+      <div class="row" style="justify-content:center">${wrong.length ? `<button class="btn good" id="pRetry">틀린 짝만 다시 (${wrong.length})</button>` : ''}<button class="btn" id="pAgain">새로 12개</button></div>
+      ${wrong.length ? `<div class="plist">${wrong.map(q => `<div><b>${filled(q, `<u>${esc(q.a)}</u>`)}</b><small>${esc(q.a)}: ${esc(pPoint(pGroup(q.g), q.a))}</small></div>`).join('')}</div>` : ''}</div>`;
+    if ($('pRetry')) $('pRetry').onclick = () => startPairs(false, wrong.map(q => q.id));
+    $('pAgain').onclick = () => startPairs(); return;
+  }
+  const q = byId[pRound.ids[pRound.done]], g = pGroup(q.g);
+  if (!pPick) {
+    const shown = shuffle([q.a, ...shuffle(q.opts).slice(0, 3)]), others = shown.filter(t => t !== q.a);
+    pPick = { shown, ask: others[Math.floor(Math.random() * others.length)], ok1: false, why: null };
+  }
+  const missN = pStore.miss[q.id] || 0;
+  const meta = `<div class="pmeta"><span>${pRound.done + 1} / ${total}</span><span>${esc(g.name)}${missN ? ` · <b class="wdot">틀림 ${missN}</b>` : ''}</span><span>맞힘 ${pRound.score}</span></div>`;
+  if (pStep === 0) {
+    area.innerHTML = `<div class="pcard">${meta}<span class="pstep">① 빈칸에 들어갈 말은?</span>
+      <div class="pq">${filled(q, '<u class="pgap">　　　</u>')}</div>
+      <div class="popts">${pPick.shown.map(t => `<button class="popt" data-t="${esc(t)}">${esc(t)}</button>`).join('')}</div></div>`;
+    area.querySelectorAll('.popt').forEach(b => b.onclick = () => {
+      pPick.ok1 = b.dataset.t === q.a; pStep = 1;
+      pPick.why = shuffle(pPick.shown.map(t => ({ t, p: pPoint(g, t) }))); drawPair();
+    });
+  } else {
+    area.innerHTML = `<div class="pcard">${meta}<div class="pverdict ${pPick.ok1 ? 'ok' : 'no'}">${pPick.ok1 ? '○' : '✕'} ${filled(q, `<u>${esc(q.a)}</u>`)}</div>
+      <span class="pstep">② 그럼 「${esc(pPick.ask)}」는?</span>
+      <div class="popts">${pPick.why.map(x => `<button class="popt why" data-t="${esc(x.t)}">${esc(x.p)}</button>`).join('')}</div><div id="pFb"></div></div>`;
+    area.querySelectorAll('.popt').forEach(b => b.onclick = () => {
+      const ok2 = b.dataset.t === pPick.ask, ok = pPick.ok1 && ok2;
+      area.querySelectorAll('.popt').forEach(x => { x.disabled = true; if (x.dataset.t === pPick.ask) x.classList.add('right'); });
+      if (!ok2) b.classList.add('wrong');
+      pairRecord(q, ok); pRound.done++; if (ok) pRound.score++; else pRound.wrong.push(q.id); pSave();
+      $('pFb').innerHTML = `<div class="ptable">${pPick.shown.map(t => `<div class="${t === q.a ? 'is-a' : ''}"><b>${esc(t)}</b><span>${esc(pPoint(g, t))}</span></div>`).join('')}</div>
+        <button class="btn good pnext" id="pNext">다음</button>`;
+      pStep = 0; pPick = null;
+      $('pNext').onclick = () => { drawPair(); window.scrollTo({ top: 0 }); }; $('pNext').scrollIntoView({ block: 'nearest' });
+    });
+  }
+}
+
 /* ===== 시작 ===== */
 async function init() {
   try { const r = await fetch('data/cards.json', { cache: 'no-cache' }); baseCards = await r.json(); } catch { baseCards = []; }
@@ -834,6 +921,7 @@ async function init() {
   try { const r = await fetch('data/sources.json', { cache: 'no-cache' }); baseSrcs = await r.json(); } catch { baseSrcs = []; }
   try { const r = await fetch('data/texts.json', { cache: 'no-cache' }); baseTxts = await r.json(); } catch { baseTxts = []; }
   try { const r = await fetch('data/mindmap.json', { cache: 'no-cache' }); baseMaps = await r.json(); } catch { baseMaps = {}; }
+  try { const r = await fetch('data/history-pairs.json', { cache: 'no-cache' }); basePairs = await r.json(); } catch { basePairs = null; }
   refreshCommon(); startDeck(true);
   if (MANAGE) { document.body.classList.add('manage'); goTab('review'); return; }
   if (!curSubject || !subjects().includes(curSubject)) showPicker();
