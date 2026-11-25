@@ -582,16 +582,23 @@ function drawCard() {
     <div class="pbar"><span style="width:${CS.done.size / CS.total * 100}%"></span></div>
     <div class="card k${it.col}" id="theCard" role="button" tabindex="0"><div class="top"><span>${badge(it.col)} ${KINDNAME[it.kind]}${tags(it)}</span><span>${again ? "↻ 다시" : ""}</span></div>
       ${frontHtml(it)}<div id="backArea" hidden>${backHtml(it)}</div></div>
-    <button class="btn flip" id="flipBtn">뒤집기 (답 보기)</button>
+    <button class="btn flip" id="flipBtn">답 보기</button>
+    <p class="tip" style="text-align:center;margin-top:-6px">카드를 누르면 답이 보이고, 한 번 더 누르면 다시 가려져요.</p>
     <div class="rate" id="rateBox" hidden>
       <button class="r1" data-r="1">✕<small>몰랐음</small></button>
       <button class="r2" data-r="2">△<small>애매</small></button>
       <button class="r3" data-r="3">○<small>알았음</small></button></div>`;
+  // 카드(또는 버튼)를 누를 때마다 답 보기 ↔ 다시 가리기. 평가 버튼은 한 번 본 뒤로 계속 보인다.
   const flip = () => {
-    document.getElementById("backArea").hidden = false; document.getElementById("flipBtn").hidden = true;
+    const back = document.getElementById("backArea"), btn = document.getElementById("flipBtn");
+    back.hidden = !back.hidden;
+    btn.textContent = back.hidden ? "답 보기" : "다시 가리기";
+    btn.classList.toggle("ghost", !back.hidden);
     document.getElementById("rateBox").hidden = false;
   };
-  document.getElementById("theCard").onclick = e => { const s = e.target.closest(".speak"); if (s) { e.stopPropagation(); speak(s.dataset.say); return; } flip(); };
+  const card = document.getElementById("theCard");
+  card.onclick = e => { const s = e.target.closest(".speak"); if (s) { e.stopPropagation(); speak(s.dataset.say); return; } flip(); };
+  card.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); flip(); } };
   document.getElementById("flipBtn").onclick = flip;
   document.querySelectorAll("#rateBox button").forEach(b => b.onclick = () => { sessRate(CS, it.id, +b.dataset.r); drawCard(); window.scrollTo({ top: 0 }); });
 }
