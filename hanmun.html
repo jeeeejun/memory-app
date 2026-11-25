@@ -167,7 +167,8 @@ mark.bl{background:none;color:inherit;border-bottom:2px solid var(--gold);paddin
 .wprompt .main{font-size:1.45rem;font-weight:700;word-break:keep-all;line-height:1.4}
 .wprompt .hint{font-size:.95rem;color:var(--muted);word-break:keep-all}
 .wprompt .hint .hh{font-family:var(--han);color:var(--ink);letter-spacing:.06em}
-.pad{position:relative;align-self:center;width:100%;touch-action:none}
+.pad{position:relative;align-self:center;width:100%;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+#pg-write{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .pad canvas{display:block;width:100%;border-radius:8px;background:var(--card);box-shadow:var(--shadow);touch-action:none}
 .wans{background:var(--hl);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;word-break:keep-all}
 .wans .hh{font-family:var(--han);font-size:2rem;font-weight:700;letter-spacing:.08em;line-height:1.3;word-break:break-all}
@@ -709,6 +710,10 @@ function makePad(cv, text, trace) {
   cv.onpointerdown = e => { e.preventDefault(); cv.setPointerCapture(e.pointerId); cur = [pos(e)]; strokes.push(cur); paint(); };
   cv.onpointermove = e => { if (!cur) return; e.preventDefault(); cur.push(pos(e)); paint(); };
   cv.onpointerup = cv.onpointercancel = () => { cur = null; };
+  // 아이폰 사파리: 빨리 두 번 그으면 '두 번 탭 확대', 꾹 누르면 돋보기·선택이 켜진다 → 쓰기 칸 안의 터치 기본 동작을 모두 막는다
+  const stop = e => { if (e.cancelable) e.preventDefault(); };
+  ["touchstart", "touchmove", "touchend", "touchcancel", "gesturestart", "gesturechange", "dblclick", "contextmenu"]
+    .forEach(t => cv.addEventListener(t, stop, { passive: false }));
   if (document.fonts && document.fonts.load) document.fonts.load(font, text).then(paint, paint);
   paint();
   return { undo() { strokes.pop(); paint(); }, clear() { strokes = []; paint(); }, reveal() { revealed = true; paint(); } };
