@@ -857,8 +857,10 @@ function startPairs(resume, list) {
   if (resume && saved && saved.key === key && saved.ids.every(id => byId[id])) { pRound = saved; drawPair(); return; }
   let ids = list;
   if (!ids) {
-    const pool = shuffle(pairPool()), miss = id => pStore.miss[id] || 0;
-    if (LS.get('ma_porder', 'plain') === 'miss') pool.sort((x, y) => miss(y.id) - miss(x.id));
+    // 맞힌 짝(last = 1)은 뒤로: 아직 못 맞힌 짝을 먼저 채우고, 다 맞혔으면 맞힌 짝으로 다시 확인
+    const pool = shuffle(pairPool()), miss = id => pStore.miss[id] || 0, solved = id => pStore.last[id] === 1 ? 1 : 0;
+    const byMiss = LS.get('ma_porder', 'plain') === 'miss';
+    pool.sort((x, y) => solved(x.id) - solved(y.id) || (byMiss ? miss(y.id) - miss(x.id) : 0));
     ids = pool.slice(0, 12).map(q => q.id);
   }
   pRound = { key, ids: shuffle(ids), done: 0, score: 0, wrong: [] }; pSave(); drawPair();
@@ -868,7 +870,25 @@ function pairRecord(q, ok) {
   if (!ok) { pStore.miss[q.id] = (pStore.miss[q.id] || 0) + 1; grade(q.card, false); }  // 틀린 짝 → 카드 탭 '몰랐던 카드'에도
   LS.set('ma_pairs', pStore);
 }
+// 이 범위에서 맞힌 짝 수
+function pairProg() {
+  const pool = pairPool(), n = pool.filter(q => pStore.last[q.id] === 1).length;
+  $('pairProg').innerHTML = pool.length ? `<span class="pdot"></span>이 범위 맞힌 짝 <b>${n}</b> / ${pool.length}<span class="pbar"><i style="width:${Math.round(n / pool.length * 100)}%"></i></span>` : '';
+}
+// 초기화: whole = 짝 전체, 아니면 위에서 고른 단원 범위만. 맞힘·틀린 횟수 기록과 진행 중 묶음을 지운다.
+function resetPairs(whole) {
+  const ids = (whole ? basePairs.qs : pairPool()).map(q => q.id);
+  const n = ids.filter(id => pStore.last[id] != null || pStore.miss[id]).length;
+  const where = whole ? '헷갈리는 짝 전체' : `「${($('fPart').selectedOptions[0]?.textContent || '이 범위').replace(/\s*\(\d+\)$/, '')}」 범위`;
+  if (!n) { alert('초기화할 기록이 없어요.'); return; }
+  if (!confirm(`${where}의 짝 기록(맞힘 ${ids.filter(id => pStore.last[id] === 1).length}개 · 틀린 횟수)을 지울까요?\n초록 동그라미가 사라지고 처음부터 다시 나와요.`)) return;
+  if (whole) pStore = { miss: {}, last: {} }; else ids.forEach(id => { delete pStore.last[id]; delete pStore.miss[id]; });
+  LS.set('ma_pairs', pStore); LS.set('ma_pround', null); startPairs(false);
+}
+$('pResetPart').onclick = () => resetPairs(false);
+$('pResetAll').onclick = () => resetPairs(true);
 function drawPair() {
+  pairProg();
   const area = $('pairArea'), byId = {}; basePairs.qs.forEach(q => byId[q.id] = q);
   const total = pRound ? pRound.ids.length : 0;
   if (!total) { area.innerHTML = '<div class="empty muted center" style="padding:30px 0">이 범위에는 헷갈리는 짝 문제가 없어요. 위에서 단원을 바꿔 보세요.</div>'; return; }
@@ -887,8 +907,8 @@ function drawPair() {
     const shown = shuffle([q.a, ...shuffle(q.opts).slice(0, 3)]), others = shown.filter(t => t !== q.a);
     pPick = { shown, ask: others[Math.floor(Math.random() * others.length)], ok1: false, why: null };
   }
-  const missN = pStore.miss[q.id] || 0;
-  const meta = `<div class="pmeta"><span>${pRound.done + 1} / ${total}</span><span>${esc(g.name)}${missN ? ` · <b class="wdot">틀림 ${missN}</b>` : ''}</span><span>맞힘 ${pRound.score}</span></div>`;
+  const missN = pStore.miss[q.id] || 0, before = pStore.last[q.id] === 1;
+  const meta = `<div class="pmeta"><span>${pRound.done + 1} / ${total}</span><span>${before ? '<b class="okc">◯ 전에 맞힘</b> · ' : ''}${esc(g.name)}${missN ? ` · <b class="wdot">틀림 ${missN}</b>` : ''}</span><span>맞힘 ${pRound.score}</span></div>`;
   if (pStep === 0) {
     area.innerHTML = `<div class="pcard">${meta}<span class="pstep">① 빈칸에 들어갈 말은?</span>
       <div class="pq">${filled(q, '<u class="pgap">　　　</u>')}</div>
@@ -905,7 +925,9 @@ function drawPair() {
       const ok2 = b.dataset.t === pPick.ask, ok = pPick.ok1 && ok2;
       area.querySelectorAll('.popt').forEach(x => { x.disabled = true; if (x.dataset.t === pPick.ask) x.classList.add('right'); });
       if (!ok2) b.classList.add('wrong');
-      pairRecord(q, ok); pRound.done++; if (ok) pRound.score++; else pRound.wrong.push(q.id); pSave();
+      pairRecord(q, ok); pRound.done++; if (ok) pRound.score++; else pRound.wrong.push(q.id); pSave(); pairProg();
+      area.querySelector('.pmeta span:last-child').textContent = '맞힘 ' + pRound.score;
+      if (ok) area.querySelector('.pcard').insertAdjacentHTML('beforeend', '<div class="pstamp" aria-label="맞힘"></div>');   // 맞히면 초록 동그라미
       $('pFb').innerHTML = `<div class="ptable">${pPick.shown.map(t => `<div class="${t === q.a ? 'is-a' : ''}"><b>${esc(t)}</b><span>${esc(pPoint(g, t))}</span></div>`).join('')}</div>
         <button class="btn good pnext" id="pNext">다음</button>`;
       pStep = 0; pPick = null;

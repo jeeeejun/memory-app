@@ -99,8 +99,13 @@
       </div>
     </div>
     <div id="pairPane" class="pairOnly">
+      <div class="pprog" id="pairProg"></div>
       <div id="pairArea"></div>
-      <p class="muted tip">① 빈칸에 맞는 말을 비슷해서 헷갈리는 말들 중에 고르고 ② <b>짝이 된 다른 말</b>은 무엇인지까지 골라야 맞힌 거예요. 틀린 짝은 카드 탭의 '몰랐던 카드'에도 모여요.</p>
+      <div class="row breset">
+        <button class="btn small" id="pResetPart">↺ 이 범위 초기화</button>
+        <button class="btn small" id="pResetAll">↺ 짝 전체 초기화</button>
+      </div>
+      <p class="muted tip">맞힌 짝은 초록 동그라미가 그려지고, 다음 묶음부터는 아직 못 맞힌 짝이 먼저 나와요. ① 빈칸에 맞는 말을 비슷해서 헷갈리는 말들 중에 고르고 ② <b>짝이 된 다른 말</b>은 무엇인지까지 골라야 맞힌 거예요. 틀린 짝은 카드 탭의 '몰랐던 카드'에도 모여요.</p>
     </div>
     <div id="quizPane" class="quizOnly">
       <div id="quizArea"></div>
