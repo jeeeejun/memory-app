@@ -33,22 +33,7 @@
 =====================================================================
 -->
 <link rel="stylesheet" href="mindmap.css">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Gowun+Dodum&family=IBM+Plex+Mono:wght@500&display=swap">
 <style>
-:root{
-  --paper:#f7f6f1; --card:#fffefa; --ink:#23262e; --muted:#6b6f7a; --rule:#dfe3ea;
-  --line:#c9cfdb; --gold:#b08a2e; --red:#c2463d; --blue:#2f5fa8; --green:#3f7d4e;
-  --chip:#eceae2; --shadow:0 1px 0 rgba(35,38,46,.06),0 6px 18px rgba(35,38,46,.07);
-  --serif:"Gowun Batang",Georgia,"Apple SD Gothic Neo",serif;
-  --sans:"Gowun Dodum","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
-  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
-}
-@media (prefers-color-scheme:dark){:root{
-  --paper:#17191e; --card:#1f2228; --ink:#e8e6df; --muted:#9a9ea8; --rule:#2c3038;
-  --line:#3a3f49; --gold:#d4ab4c; --red:#e27367; --blue:#7fa6e6; --green:#78b487;
-  --chip:#2a2d34; --shadow:0 1px 0 rgba(0,0,0,.3),0 6px 18px rgba(0,0,0,.35); --mm-lum:64%; color-scheme:dark}}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html,body,button,a{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
@@ -60,8 +45,6 @@ h1{font-family:var(--serif);font-size:1.7rem;margin:0;letter-spacing:-.01em}
 button{font:inherit;color:inherit;cursor:pointer}
 button:focus-visible,a:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
 .panel{display:flex;flex-direction:column;gap:14px}
-.toplinks{display:flex;gap:6px;margin-bottom:8px}
-.toplinks a{background:#0f172a;color:#facc15;padding:6px 10px;border-radius:10px;font:13px -apple-system,sans-serif;text-decoration:none}
 .menu{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
 .mtile{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 14px;min-height:118px;box-shadow:var(--shadow);color:var(--ink);text-decoration:none}
 .mtile:active{transform:scale(.98)}
@@ -130,12 +113,13 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--blue);outline-offse
 .result b{font-family:var(--serif);font-size:1.4rem}
 select,textarea,input{font-size:max(16px,1em)}
 </style>
+<link rel="stylesheet" href="theme.css">
 </head>
 <body>
 <div class="wrap">
   <div id="home" class="panel">
     <header>
-      <div class="toplinks"><a href="index.html">← 암기장</a><a href="vocab.html">단어장</a></div>
+      <div class="toplinks"><a href="index.html">‹ 암기장</a><a href="vocab.html">단어장</a></div>
       <h1>모고 지문 암기</h1>
       <p class="sub">2026 고1 10월 모의고사 18~24번, 29~40번 · 지문 내용을 마인드맵과 흐름으로 외워요</p>
     </header>

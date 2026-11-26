@@ -30,22 +30,10 @@
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Gowun+Dodum&family=Noto+Serif+KR:wght@500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700&display=swap">
 <style>
-:root{
-  --paper:#f7f6f1; --card:#fffefa; --ink:#23262e; --muted:#6b6f7a; --rule:#dfe3ea;
-  --line:#c9cfdb; --gold:#b08a2e; --red:#c2463d; --blue:#2f5fa8; --green:#3f7d4e; --purple:#7b4bb7;
-  --chip:#eceae2; --hl:#fbeeb0; --shadow:0 1px 0 rgba(35,38,46,.06),0 6px 18px rgba(35,38,46,.07);
-  --tP:#efe5fb; --tR:#fbe7e4; --tB:#e6eefa; --tK:transparent;
-  --serif:"Gowun Batang",Georgia,"Apple SD Gothic Neo",serif;
-  --han:"Noto Serif KR","Noto Serif CJK KR","Apple SD Gothic Neo",serif;
-  --sans:"Gowun Dodum","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
-}
-@media (prefers-color-scheme:dark){:root{
-  --paper:#17191e; --card:#1f2228; --ink:#e8e6df; --muted:#9a9ea8; --rule:#2c3038;
-  --line:#3a3f49; --gold:#d4ab4c; --red:#e27367; --blue:#7fa6e6; --green:#78b487; --purple:#b48ef0;
-  --chip:#2a2d34; --hl:#4a4224; --shadow:0 1px 0 rgba(0,0,0,.3),0 6px 18px rgba(0,0,0,.35);
-  --tP:#3a2d4f; --tR:#4a2a27; --tB:#25324a; color-scheme:dark}}
+:root{--tP:#efe5fb;--tR:#fbe7e4;--tB:#e6eefa;--tK:transparent}
+@media (prefers-color-scheme:dark){:root{--tP:#3a2d4f;--tR:#4a2a27;--tB:#25324a}}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html,body,button,a{touch-action:manipulation}
@@ -189,11 +177,12 @@ mark.bl{background:none;color:inherit;border-bottom:2px solid var(--gold);paddin
 .how a{color:var(--blue)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
+<link rel="stylesheet" href="theme.css">
 </head>
 <body>
 <div class="wrap">
   <header>
-    <a href="index.html" style="display:inline-block;margin-bottom:8px;background:#0f172a;color:#facc15;padding:6px 10px;border-radius:10px;font:13px -apple-system,sans-serif;text-decoration:none">← 암기장</a>
+    <a class="backlink" href="index.html">‹ 암기장</a>
     <h1>한문 암기</h1>
     <p class="sub" id="srcLine"></p>
   </header>
@@ -406,6 +395,7 @@ function show(p) {
   page = p;
   document.getElementById("home").hidden = p !== "home";
   document.getElementById("pagebar").hidden = p === "home";
+  document.querySelector(".wrap > header").hidden = p !== "home";   // 하위 화면에서는 큰 제목 대신 ‹ 메뉴 막대만
   Object.keys(PAGES).forEach(k => document.getElementById("pg-" + k).hidden = k !== p);
   if (p === "home") { renderHome(); return; }
   document.getElementById("pageTitle").textContent = PAGES[p];

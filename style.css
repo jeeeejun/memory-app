@@ -1,31 +1,6 @@
-/* ===== 색 (기기 설정에 따라 어두운/밝은 화면) ===== */
-:root{
-  --bg:#0b1020;--surface:#151c30;--surface2:#212a45;--line:#2b3555;
-  --text:#e9edf6;--sub:#c3cbdd;--muted:#8d99b6;
-  --accent:#fbbf24;--accent-ink:#1c1400;--accent-soft:rgba(251,191,36,.14);
-  --good:#16a34a;--bad:#dc2626;--mid:#b7791f;
-  --ok-bg:#12351f;--ok-fg:#86efac;--ok-line:#4ade80;
-  --no-bg:#3f1113;--no-fg:#fca5a5;--no-line:#f87171;
-  --see-bg:#172f52;--see-fg:#9cc7ff;--see-line:#60a5fa;
-  --shadow:0 1px 2px rgba(0,0,0,.3);
-  --mm-lum:64%;
-  color-scheme:dark;
-}
-@media (prefers-color-scheme:light){:root{
-  --bg:#f4f5fa;--surface:#fff;--surface2:#eceff6;--line:#dde1ec;
-  --text:#1a2133;--sub:#3d475c;--muted:#687389;
-  --accent:#4f46e5;--accent-ink:#fff;--accent-soft:rgba(79,70,229,.1);
-  --mid:#c2800f;
-  --ok-bg:#dcfce7;--ok-fg:#166534;--ok-line:#22c55e;
-  --no-bg:#fee2e2;--no-fg:#b91c1c;--no-line:#ef4444;
-  --see-bg:#dbeafe;--see-fg:#1d4ed8;--see-line:#3b82f6;
-  --shadow:0 1px 3px rgba(26,33,51,.08);
-  --mm-lum:46%;
-  color-scheme:light;
-}}
-
+/* 색·글꼴은 theme.css 에서 정한다 */
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{margin:0;font-family:-apple-system,"Apple SD Gothic Neo","Pretendard","Noto Sans KR",system-ui,sans-serif;background:var(--bg);color:var(--text);padding-bottom:calc(env(safe-area-inset-bottom) + 84px);-webkit-font-smoothing:antialiased}
+body{margin:0;font-family:var(--sans);background:var(--bg);color:var(--text);padding-bottom:calc(env(safe-area-inset-bottom) + 84px);-webkit-font-smoothing:antialiased}
 main{max-width:720px;margin:0 auto;padding:0 16px}
 h2{font-size:16px;margin:26px 0 8px}
 .muted{color:var(--muted);font-size:13px;line-height:1.55}

@@ -44,27 +44,8 @@
 =====================================================================
 -->
 <link rel="stylesheet" href="mindmap.css">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Gowun+Dodum&family=IBM+Plex+Mono:wght@500&display=swap">
 <style>
 /* Layout: one column notebook; index-card flashcard at center, source + passage chips on top, study sheets as ruled pages */
-:root{
-  --paper:#f7f6f1; --card:#fffefa; --ink:#23262e; --muted:#6b6f7a; --rule:#dfe3ea;
-  --line:#c9cfdb; --gold:#b08a2e; --red:#c2463d; --blue:#2f5fa8; --green:#3f7d4e;
-  --chip:#eceae2; --hl:#fbeeb0; --shadow:0 1px 0 rgba(35,38,46,.06),0 6px 18px rgba(35,38,46,.07);
-  --serif:"Gowun Batang",Georgia,"Apple SD Gothic Neo",serif;
-  --sans:"Gowun Dodum","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
-  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
-}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --paper:#17191e; --card:#1f2228; --ink:#e8e6df; --muted:#9a9ea8; --rule:#2c3038;
-  --line:#3a3f49; --gold:#d4ab4c; --red:#e27367; --blue:#7fa6e6; --green:#78b487;
-  --chip:#2a2d34; --hl:#4a4224; --shadow:0 1px 0 rgba(0,0,0,.3),0 6px 18px rgba(0,0,0,.35); --mm-lum:64%; color-scheme:dark}}
-:root[data-theme="dark"]{
-  --paper:#17191e; --card:#1f2228; --ink:#e8e6df; --muted:#9a9ea8; --rule:#2c3038;
-  --line:#3a3f49; --gold:#d4ab4c; --red:#e27367; --blue:#7fa6e6; --green:#78b487;
-  --chip:#2a2d34; --hl:#4a4224; --shadow:0 1px 0 rgba(0,0,0,.3),0 6px 18px rgba(0,0,0,.35); --mm-lum:64%; color-scheme:dark}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.55}
@@ -215,6 +196,7 @@ input[type=text],input[type=search]{width:100%;font:inherit;font-size:1.15rem;pa
 html,body,button,a{touch-action:manipulation}
 select,textarea,input{font-size:max(16px,1em)}
 </style>
+<link rel="stylesheet" href="theme.css">
 
 <!-- ===================== 단어 데이터 (편집 가능) ===================== -->
 <script type="text/plain" id="vocab-data">
@@ -2515,7 +2497,7 @@ mural|벽화
 <div class="wrap">
   <div id="home" class="panel" style="gap:18px">
   <header>
-    <a href="index.html" style="display:inline-block;margin-bottom:8px;background:#0f172a;color:#facc15;padding:6px 10px;border-radius:10px;font:13px -apple-system,sans-serif;text-decoration:none">← 암기장</a>
+    <a class="backlink" href="index.html">‹ 암기장</a>
     <h1>고1 영어 단어장</h1>
     <p class="sub">2026 고1 10월 모의고사 18–24·29–40번 · 빠바 07–08과 · 영어 교과서 3과 어휘</p>
   </header>

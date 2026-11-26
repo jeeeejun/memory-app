@@ -1,0 +1,112 @@
+/* =====================================================================
+   암기장 공통 디자인 (모든 페이지가 마지막에 불러옴)
+   - 색·글꼴·모서리·그림자를 여기 한 곳에서만 정한다. 페이지 <style>에는 색을 직접 쓰지 않는다.
+   - 메인 화면(style.css) 이름: --bg --surface --surface2 --line --text --sub --muted --accent ...
+   - 공책형 페이지(vocab·mogo·korean-grammar·hanmun) 이름: --paper --card --ink --rule --chip --gold --red --blue --green ...
+     두 이름 모두 아래 한 팔레트에서 나온다.
+   - 기기 설정에 따라 밝은/어두운 화면이 자동으로 바뀐다.
+   ===================================================================== */
+:root{
+  /* 팔레트 — 밝은 화면 */
+  --bg:#f5f6f9; --surface:#ffffff; --surface2:#eef0f5; --line:#e1e4ec; --line2:#cfd4df;
+  --text:#161a24; --sub:#3b4254; --muted:#6c7488;
+  --accent:#4f46e5; --accent-ink:#ffffff; --accent-soft:rgba(79,70,229,.10);
+  --good:#16a34a; --bad:#dc2626; --mid:#d97706;
+  --ok-bg:#dcfce7; --ok-fg:#166534; --ok-line:#22c55e;
+  --no-bg:#fee2e2; --no-fg:#b91c1c; --no-line:#ef4444;
+  --see-bg:#e0e7ff; --see-fg:#3730a3; --see-line:#6366f1;
+  --hl:#fff1b8;
+  --shadow:0 1px 2px rgba(16,24,40,.05),0 4px 16px rgba(16,24,40,.06);
+  --radius:18px; --radius-sm:12px;
+  --mm-lum:46%;
+  /* 글꼴: 아이폰은 시스템 글꼴(애플 산돌고딕), 그 밖엔 Pretendard·Noto Sans KR. 한자는 --han, 영어 본문은 --en */
+  --sans:-apple-system,BlinkMacSystemFont,"Pretendard","Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",system-ui,sans-serif;
+  --serif:var(--sans);
+  --en:Georgia,"Times New Roman",serif;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --han:"Noto Serif KR","Noto Serif CJK KR","Apple SD Gothic Neo",serif;
+  /* 공책형 페이지용 이름 */
+  --paper:var(--bg); --card:var(--surface); --ink:var(--text); --rule:var(--line); --chip:var(--surface2);
+  --gold:#b7791f; --red:#d9363e; --blue:#2563eb; --green:#15803d; --purple:#7c3aed;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0d0f14; --surface:#171a22; --surface2:#20242f; --line:#2a2f3b; --line2:#3a404e;
+  --text:#eceef4; --sub:#c3c8d4; --muted:#8a92a6;
+  --accent:#8b8cff; --accent-ink:#0d0f14; --accent-soft:rgba(139,140,255,.16);
+  --good:#16a34a; --bad:#dc2626; --mid:#b7791f;
+  --ok-bg:#12351f; --ok-fg:#86efac; --ok-line:#4ade80;
+  --no-bg:#3f1113; --no-fg:#fca5a5; --no-line:#f87171;
+  --see-bg:#1e2150; --see-fg:#c7cbff; --see-line:#8b8cff;
+  --hl:#4a4224;
+  --shadow:0 1px 2px rgba(0,0,0,.35),0 6px 18px rgba(0,0,0,.25);
+  --mm-lum:64%;
+  --gold:#e0b44c; --red:#f17b7b; --blue:#7aa2f7; --green:#6fcf8a; --purple:#b794f6;
+  color-scheme:dark;
+}}
+
+/* ---------- 바탕 ---------- */
+html,body{background:var(--bg);color:var(--text)}
+body{font-family:var(--sans);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+h1,h2,h3,h4,h5{font-family:var(--sans)}
+::selection{background:var(--accent-soft)}
+a{color:inherit}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--accent-soft);outline-offset:2px}
+
+/* ---------- 페이지 머리말: ‹ 암기장 (모든 하위 페이지 같은 모양) ---------- */
+.backlink,.toplinks a{display:inline-flex;align-items:center;gap:4px;min-height:36px;padding:6px 14px;border-radius:999px;background:var(--surface);border:1px solid var(--line);color:var(--sub);font:600 13px/1 var(--sans);text-decoration:none;box-shadow:none}
+.backlink:active,.toplinks a:active{transform:scale(.97)}
+.toplinks{display:flex;gap:6px;margin-bottom:10px}
+:where(.wrap) > header h1,.wrap header h1,.picker h1{font-family:var(--sans);font-weight:800;font-size:1.75rem;letter-spacing:-.03em;line-height:1.25}
+:where(.wrap) header .backlink{margin-bottom:10px}
+
+/* ---------- 타일 (처음 화면 과목 · 각 페이지 메뉴) ---------- */
+.ptile,.mtile{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);color:var(--text);padding:16px;gap:4px;transition:transform .12s}
+.ptile:active,.mtile:active{transform:scale(.98)}
+.ptile b,.mtile b{font-family:var(--sans);font-weight:700;font-size:1.08rem;letter-spacing:-.01em}
+.ptile small,.mtile small{color:var(--muted);font-size:.8rem;line-height:1.45}
+.ptile .ic,.mtile .ic{font-size:1.65rem;line-height:1;margin-bottom:6px}
+
+/* ---------- 칩 · 고르기 버튼 (선택된 것은 모두 같은 강조색) ---------- */
+.chip{border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--sub)}
+.chip.on,.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700}
+.chip.alt[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.seg{border:1px solid var(--line);border-radius:var(--radius-sm);overflow:hidden;background:var(--surface)}
+.seg button{background:var(--surface);color:var(--sub);border:0}
+.seg button[aria-pressed="true"],.seg button.on{background:var(--accent);color:var(--accent-ink);font-weight:700}
+
+/* ---------- 공책형 페이지 버튼·카드 (.wrap 안) ---------- */
+:where(.wrap) .btn{background:var(--accent);border:1px solid var(--accent);color:var(--accent-ink);border-radius:14px;font-weight:700}
+:where(.wrap) .btn.ghost{background:var(--surface);border-color:var(--line);color:var(--text)}
+:where(.wrap) .btn:active{opacity:.85}
+:where(.wrap) .card{background:var(--surface);background-image:none;border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);padding:30px 22px 24px}
+:where(.wrap) .card::before{display:none}
+:where(.wrap) .card .sec{left:22px}
+:where(.wrap) .card .front{font-family:var(--sans);letter-spacing:-.02em}
+:where(.wrap) .card .back{color:var(--accent)}
+:where(.wrap) .q,.wrap .result,.wrap .sheet,.wrap .srow{border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);background:var(--surface)}
+:where(.wrap) .opt{border-radius:14px;border-color:var(--line);background:var(--surface)}
+:where(.wrap) .opt.right{border-color:var(--ok-line);background:var(--ok-bg);color:var(--ok-fg)}
+:where(.wrap) .opt.wrong{border-color:var(--no-line);background:var(--no-bg);color:var(--no-fg)}
+:where(.wrap) .rate button{border-radius:16px}
+.wrap .r1{background:var(--bad)}.wrap .r2{background:var(--mid);color:#fff!important}.wrap .r3{background:var(--good)}
+:where(.wrap) input[type=text],.wrap input[type=search]{border:1px solid var(--line);border-radius:14px;background:var(--surface);color:var(--text)}
+:where(.wrap) input[type=text]:focus,.wrap input[type=search]:focus{border-color:var(--accent);outline:3px solid var(--accent-soft)}
+.pagebar{background:var(--bg);border-bottom:1px solid var(--line)}
+.pagebar h2{font-family:var(--sans);font-weight:800;letter-spacing:-.02em}
+.pagebar .back{background:var(--surface);border:1px solid var(--line);color:var(--sub);font-weight:600}
+.bar{background:var(--surface2)}
+.label{letter-spacing:.02em;text-transform:none;font-weight:600}
+body::before{background:var(--bg)}
+
+/* 한문 단계 고르기 */
+.tier[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+
+/* ---------- 아래 탭 막대 (메인 화면 · 영어 복습 같은 모양) ---------- */
+.tabs{background:color-mix(in srgb,var(--bg) 86%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-top:1px solid var(--line)}
+
+/* 아이폰: 두 번 탭 확대 막기 · 16px 미만 입력칸 자동 확대 막기 */
+html,body,button,a{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+select,textarea,input{font-size:max(16px,1em)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media print{html,body{background:#fff!important;color:#000}}
