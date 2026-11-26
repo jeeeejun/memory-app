@@ -13,12 +13,13 @@
   미리 만든 PDF 는 pdf/grammar-<id>.pdf
 -->
 <style>
-:root{--red:#c62828;--ink:#111;--muted:#555;--line:#bbb}
+:root{--red:#c62828}
+.paper{--red:#c62828;--ink:#111;--muted:#555;--line:#bbb;color:#111}
 *{box-sizing:border-box}
-html,body{margin:0;background:#e9e9ee;color:var(--ink);font-family:"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;touch-action:manipulation}
-.bar{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:calc(env(safe-area-inset-top) + 8px) 12px 8px;background:#17191e;color:#fff}
-.bar a,.bar button{font:inherit;font-size:14px;border:0;border-radius:10px;padding:10px 14px;min-height:42px;background:#2f3440;color:#fff;text-decoration:none;cursor:pointer}
-.bar .pri{background:#facc15;color:#111;font-weight:700}
+html,body{margin:0;background:var(--surface2);font-family:"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;touch-action:manipulation}
+.bar{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:calc(env(safe-area-inset-top) + 8px) 12px 8px;background:color-mix(in srgb,var(--bg) 88%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);color:var(--text)}
+.bar a,.bar button{font:inherit;font-size:14px;font-weight:600;border:1px solid var(--line);border-radius:12px;padding:10px 14px;min-height:42px;background:var(--surface);color:var(--text);text-decoration:none;cursor:pointer}
+.bar .pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700}
 .bar label{font-size:13px;display:flex;align-items:center;gap:4px}
 .bar .sp{margin-left:auto}
 .fit{overflow-x:auto;padding:12px 0 40px}
@@ -63,10 +64,11 @@ u{text-underline-offset:2px}
   .paper{box-shadow:none;margin:0;width:auto;padding:13mm 13mm 14mm;zoom:1!important}
 }
 </style>
+<link rel="stylesheet" href="theme.css">
 </head>
 <body>
 <div class="bar" id="bar">
-  <a href="korean-grammar.html#sheets">‹ 문제지 목록</a>
+  <a class="backlink" href="korean-grammar.html#sheets">‹ 문제지 목록</a>
   <label><input type="checkbox" id="withAns" checked> 정답과 해설 포함</label>
   <span class="sp"></span>
   <a id="pdfLink" class="pri" hidden>PDF 열기</a>

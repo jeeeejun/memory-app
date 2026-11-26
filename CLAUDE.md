@@ -20,6 +20,14 @@
 3. `python3 tools/<스크립트>.py` 실행 → `data/cards.json`, `data/summaries.json`에 합쳐진다(같은 접두어만 교체).
 4. `sw.js` VERSION 올리고 커밋·푸시. 사이트 반영은 main에 머지돼야 한다.
 
+## 디자인 (모든 페이지 공통)
+- 색·글꼴·모서리·그림자는 `theme.css` 한 곳에서만 정한다. 모든 페이지가 자기 `<style>` 뒤에 `theme.css`를 불러온다(index는 `style.css` 뒤). 페이지 `<style>`에 색 값을 직접 쓰지 말고 변수를 쓴다.
+  - 변수 이름: 메인 화면식 `--bg --surface --surface2 --line --text --sub --muted --accent --accent-ink --accent-soft --good --bad --mid --ok-* --no-* --see-*`, 공책형 페이지식 `--paper --card --ink --rule --chip --gold --red --blue --green --purple --hl`. 둘 다 한 팔레트에서 나온다(밝은/어두운 화면 자동).
+  - 글꼴: `--sans`(시스템 한글 글꼴, 제목·본문 모두), 영어 문장은 `--en`, 한자는 `--han`(한문만 Noto Serif KR을 불러옴). 다른 웹 글꼴은 쓰지 않는다.
+  - 공통 모양: 하위 페이지 머리말의 `‹ 암기장`은 `<a class="backlink">` 또는 `.toplinks a`, 메뉴 타일은 `.ptile`/`.mtile`, 선택된 칩·고르기 버튼은 모두 강조색(`--accent`). 하위 화면에서는 큰 제목을 숨기고 `‹ 메뉴` 막대만 보인다.
+  - 공책형 페이지의 `.btn/.card/.opt` 덮어쓰기는 `:where(.wrap)`으로 우선순위를 낮춰 두었다 → 페이지의 세부 모양(`.card.kP` 색 띠 등)이 이긴다.
+  - 문제지 종이(`grammar-sheet.html`의 `.paper`)는 인쇄용이라 흰 종이·검은 글자 그대로 둔다.
+
 ## 데이터가 쓰이는 곳 (index.html / app.js)
 - 처음 화면: 과목 선택(`subject` 값으로 자동 생성). 영어는 `english.html`, `vocab.html` 링크.
 - 모고 지문 암기: `mogo.html` (한 파일, `vocab.html`과 같은 스타일, `mindmap.js` 부품 사용). 처음 화면 영어 칸과 단어장 메뉴에서 링크(`mogo.html#map` 마인드맵 / `#flow` 흐름).
