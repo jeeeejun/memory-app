@@ -135,6 +135,22 @@ GROUPS = [
   ("한국광복군", "1940년 임시 정부가 창설, 인도·미얀마 전선, OSS와 국내 진공 준비"),
   ("조선 건국 동맹", "국내, 광복 1년여 앞두고 여운형 주도"),
  ]),
+ ("govs", "6월 민주 항쟁 이후 정부", [
+  ("노태우 정부", "여소야대 → 3당 합당, 공산권 수교, 남북 기본 합의서·UN 동시 가입"),
+  ("김영삼 정부", "민간인 출신 대통령, 금융 실명제, 지방 자치제, 역사 바로 세우기"),
+  ("김대중 정부", "최초의 평화적 여야 정권 교체, 외환 위기 극복, 햇볕정책·6·15 선언"),
+  ("노무현 정부", "과거사 청산, 세종시, 한미 FTA·이라크 파병, 개성 공단·10·4 선언"),
+  ("이명박 정부", "실용주의, 4대강 사업, 한미 동맹 강화"),
+  ("박근혜 정부", "창조 경제, 미국 고고도 미사일 방어 체계 도입, 국정 농단 → 파면"),
+  ("문재인 정부", "복지 정책 강화, 탈원전, K-방역, 판문점 선언"),
+ ]),
+ ("nk", "남북 합의·선언", [
+  ("남북 적십자 회담", "1972~1973년, 닉슨 독트린을 배경으로 열린 첫 남북 회담"),
+  ("남북 기본 합의서", "노태우 정부, 남북 고위급 회담에서 채택 — 불가침·체제 인정"),
+  ("6·15 남북 공동 선언", "김대중 정부, 분단 이후 최초 정상 회담(2000) → 이산가족 상봉"),
+  ("10·4 선언", "노무현 정부, 제2차 남북 정상 회담 — 평화 번영을 위한 선언"),
+  ("판문점 선언", "문재인 정부, 제3차 남북 정상 회담"),
+ ]),
  ("allies", "연합국의 독립 약속", [
   ("카이로 선언", "1943. 12. 미·영·중, 적절한 시기 한국 독립 약속"),
   ("얄타 회담", "1945. 2. 미·영·소, 소련 대일전 참전 합의"),
@@ -142,7 +158,7 @@ GROUPS = [
  ]),
 ]
 # 다른 말의 일부일 때는 빈칸으로 만들지 않는다 (예: '중앙정보부장'의 '중앙정보부', '원불교'의 '불교')
-PROTECT = ["중앙정보부장", "조선 의용대 화북 지대", "조선의용대", "천도교 소년회", "조선 불교 유신회"]
+PROTECT = ["이명박·박근혜 정부", "중앙정보부장", "조선 의용대 화북 지대", "조선의용대", "천도교 소년회", "조선 불교 유신회"]
 
 root = os.path.join(os.path.dirname(__file__), "..", "data")
 cards = [c for c in json.load(open(os.path.join(root, "cards.json"), encoding="utf-8")) if c["subject"] == SUBJ and c.get("status") == "확정"]
@@ -157,7 +173,7 @@ def spans(s, t):
             long += [(m.start(), m.start() + len(L)) for m in re.finditer(re.escape(L), s)]
     return [(m.start(), m.end()) for m in re.finditer(re.escape(t), s) if not any(a <= m.start() and m.end() <= b for a, b in long)]
 
-groups, qs = [], []
+groups, qs, made_ids = [], [], set()
 for gid, name, terms in GROUPS:
     names = [t for t, _ in terms]
     assert len(set(names)) == len(names) and len(names) >= 3, gid
@@ -171,6 +187,8 @@ for gid, name, terms in GROUPS:
             if spans(s, t): continue
             opts = [o for o in names if o != t and not spans(s, o)]   # 문장에 이미 보이는 말은 보기에서 뺀다
             if not opts: continue                                     # 보기가 최소 2개(정답 + 1)
+            if f"{c['id']}|{t}" in made_ids: made += 1; continue        # 같은 말이 다른 묶음에도 있으면 처음 묶음 문제만
+            made_ids.add(f"{c['id']}|{t}")
             qs.append({"id": f"{c['id']}|{t}", "g": gid, "card": c["id"], "unit": c["unit"], "s": s, "a": t, "opts": opts})
             made += 1
         assert made, ("문제를 못 만든 말 (카드 문장에 없음)", gid, t)

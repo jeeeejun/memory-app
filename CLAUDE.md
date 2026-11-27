@@ -17,6 +17,7 @@
    - `status: "확정"`으로 넣으면 바로 빈칸·카드·걷기에 나온다.
    - 사료(사료 박스·기출 제시문)는 외울 내용과 따로 `data/sources.json`에 넣는다 → '사료' 탭(보기 / 사료 보고 맞히기).
      예시: `tools/history_justice_0405.py` (한국사2 학습지, 기준: 전체 · 손글씨 빈칸)의 `S` 목록 `(단원코드, 제목, 본문, 출처, 정답, 해설)`.
+     한국사2 학습지 Ⅲ단원(6월 민주 항쟁 이후 정부들·남북 관계·동아시아)은 `tools/history_justice_iii.py`(id 접두어 `kj3-`, 단원 `3-1-1`·`3-2-1`·`3-2-2`). 새 단원을 넣으면 `tools/mindmap_history.py`의 `PARTS`·`FLOW`와 `tools/history_pairs.py`의 `GROUPS`도 고치고 세 스크립트를 다시 실행한다.
 3. `python3 tools/<스크립트>.py` 실행 → `data/cards.json`, `data/summaries.json`에 합쳐진다(같은 접두어만 교체).
 4. `sw.js` VERSION 올리고 커밋·푸시. 사이트 반영은 main에 머지돼야 한다.
 

@@ -370,7 +370,7 @@ if ('speechSynthesis' in window) { pickVoice(); speechSynthesis.onvoiceschanged 
 const DIGIT = '영일이삼사오육칠팔구';
 function sayable(t) {
   return String(t || '')
-    .replace(/12·12/g, '십이 십이')
+    .replace(/12·12/g, '십이 십이').replace(/10·26/g, '십이륙').replace(/10·4/g, '십사').replace(/6·10/g, '육십')   // 자릿수대로 읽으면 어색한 것
     .replace(/(\d{1,2})·(\d{1,2})/g, (m, x, y) => [...(x + y)].map(d => DIGIT[d]).join(''))        // 4·19 → 사일구
     .replace(/(\d{4})\.\s*(\d{1,2})\.(?:\s*(\d{1,2})\.)?/g, (m, y, mo, d) => `${y}년 ${mo}월${d ? ` ${d}일` : ''}`) // 1943. 12. → 1943년 12월
     .replace(/(^|[^\d])(\d{1,2})\.\s*(\d{1,2})\./g, (m, p, mo, d) => `${p}${mo}월 ${d}일`)          // 4. 11. → 4월 11일
