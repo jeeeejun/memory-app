@@ -108,9 +108,7 @@ function showPicker() {
   document.querySelector('main').classList.add('hidden'); document.querySelector('.tabs').classList.add('hidden');
 }
 const SUBJ_ICON = { '한국사': '🏛️', '수학': '📐', '통합과학': '🔬', '통합사회': '🌏', '국어': '📖', '영어': '🔤' };
-// 비밀번호가 걸린 과목(lock.js의 HASH, 지금은 국어)은 맞혀야 들어간다. 앱을 끌 때까지 한 번만 묻는다.
 function pickSubject(s, tab) {
-  if (window.Lock && !Lock.isOpen(s)) { Lock.require(s, () => pickSubject(s, tab), () => showPicker()); return; }
   curSubject = s; LS.set('ma_subject', s);
   $('picker').classList.add('hidden'); $('topBar').classList.remove('hidden');
   document.querySelector('main').classList.remove('hidden'); document.querySelector('.tabs').classList.remove('hidden');
@@ -1023,7 +1021,6 @@ async function init() {
   refreshCommon(); startDeck(true);
   if (MANAGE) { document.body.classList.add('manage'); goTab('review'); return; }
   if (!curSubject || !subjects().includes(curSubject)) showPicker();
-  else if (window.Lock && !Lock.isOpen(curSubject)) { const t = LS.get('ma_tab', 'blank'); showPicker(); pickSubject(curSubject, t !== 'walk' ? t : 'blank'); }   // 잠긴 과목으로 다시 열면 비밀번호부터
   else { const t = LS.get('ma_tab', 'blank'), btn = document.querySelector(`.tabs button[data-tab="${t}"]`); btn && !btn.classList.contains('hidden') && t !== 'walk' ? goTab(t) : renderBlank(); }
 }
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => { });
