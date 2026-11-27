@@ -297,7 +297,7 @@ function renderBlank() {
   $('blankBox').innerHTML = html; $('bReset').classList.remove('hidden');
   updateBlankBar(n, type);
   $('bTip').innerHTML = type ? '빈칸에 답을 쓰고 <b>채점</b>을 누르세요. 띄어쓰기·가운뎃점(·)은 무시해요. 틀린 빈칸은 \'틀린 것만\'으로 다시 볼 수 있어요.'
-    : '빈칸을 누르면 답과 <b>○ 알았음 / ✕ 몰랐음</b> 버튼이 나와요. 고른 뒤에도 답을 다시 누르면 바꿀 수 있어요. 진행 상황은 저장돼서 새로고침해도 이어져요. 몰랐음은 다음에도 <b>빨간 테두리</b>로 다시 물어봐요.';
+    : '빈칸을 누르면 답과 <b>○ 알았음 / ✕ 몰랐음</b> 버튼이 나와요. 답을 <b>한 번 더 누르면 다시 가려져요</b>(가린 뒤 또 누르면 다시 고를 수 있어요). 진행 상황은 저장돼서 새로고침해도 이어져요. 몰랐음은 다음에도 <b>빨간 테두리</b>로 다시 물어봐요.';
 }
 function updateBlankBar(n, type) {
   // 지금 화면에 있는 빈칸만 셈
@@ -324,7 +324,8 @@ $('blankBox').onclick = e => {
   const j = e.target.closest('.bj'), b = j || e.target.closest('.bk'); if (!b) return;
   const id = b.closest('.bsent').dataset.id, k = b.dataset.k;
   if (j) { bState[k] = j.dataset.j; markBlank(id, j.dataset.i, j.dataset.j === 'no'); } // 알았음 → 몰랐음 기록 지움, 몰랐음 → 기록
-  else bState[k] = 'shown';   // 답 보기 (이미 고른 것도 다시 누르면 바꿀 수 있게 버튼이 나옴)
+  else if (bState[k]) delete bState[k];   // 답이 보이는 빈칸을 한 번 더 누르면 다시 가림 (몰랐던 빈칸은 빨간 테두리로 돌아감)
+  else bState[k] = 'shown';                // 가린 빈칸을 누르면 답 + ○/✕ 버튼
   saveBState(); renderBlank();
 };
 $('blankBox').addEventListener('keydown', e => {
