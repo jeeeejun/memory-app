@@ -6,6 +6,9 @@
      두 이름 모두 아래 한 팔레트에서 나온다.
    - 기기 설정에 따라 밝은/어두운 화면이 자동으로 바뀐다.
    ===================================================================== */
+/* 옛한글(속미인곡·시조 등): 아래아·첫가끝 자모만 이 글꼴로 모아 그린다. 해당 글자가 있을 때만 내려받는다. fonts/README.md 참고 */
+@font-face{font-family:"YetHangul";font-weight:400;font-display:swap;src:url(fonts/yethangul-Regular.woff2) format("woff2");unicode-range:U+1100-11FF,U+A960-A97F,U+D7B0-D7FF,U+302E-302F}
+@font-face{font-family:"YetHangul";font-weight:700;font-display:swap;src:url(fonts/yethangul-Bold.woff2) format("woff2");unicode-range:U+1100-11FF,U+A960-A97F,U+D7B0-D7FF,U+302E-302F}
 :root{
   /* 팔레트 — 밝은 화면 */
   --bg:#f5f6f9; --surface:#ffffff; --surface2:#eef0f5; --line:#e1e4ec; --line2:#cfd4df;
@@ -20,11 +23,11 @@
   --radius:18px; --radius-sm:12px;
   --mm-lum:46%;
   /* 글꼴: 아이폰은 시스템 글꼴(애플 산돌고딕), 그 밖엔 Pretendard·Noto Sans KR. 한자는 --han, 영어 본문은 --en */
-  --sans:-apple-system,BlinkMacSystemFont,"Pretendard","Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",system-ui,sans-serif;
+  --sans:"YetHangul",-apple-system,BlinkMacSystemFont,"Pretendard","Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",system-ui,sans-serif;
   --serif:var(--sans);
   --en:Georgia,"Times New Roman",serif;
   --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
-  --han:"Noto Serif KR","Noto Serif CJK KR","Apple SD Gothic Neo",serif;
+  --han:"YetHangul","Noto Serif KR","Noto Serif CJK KR","Apple SD Gothic Neo",serif;
   /* 공책형 페이지용 이름 */
   --paper:var(--bg); --card:var(--surface); --ink:var(--text); --rule:var(--line); --chip:var(--surface2);
   --gold:#b7791f; --red:#d9363e; --blue:#2563eb; --green:#15803d; --purple:#7c3aed;
