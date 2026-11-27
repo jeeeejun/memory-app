@@ -24,6 +24,7 @@
 - 색·글꼴·모서리·그림자는 `theme.css` 한 곳에서만 정한다. 모든 페이지가 자기 `<style>` 뒤에 `theme.css`를 불러온다(index는 `style.css` 뒤). 페이지 `<style>`에 색 값을 직접 쓰지 말고 변수를 쓴다.
   - 변수 이름: 메인 화면식 `--bg --surface --surface2 --line --text --sub --muted --accent --accent-ink --accent-soft --good --bad --mid --ok-* --no-* --see-*`, 공책형 페이지식 `--paper --card --ink --rule --chip --gold --red --blue --green --purple --hl`. 둘 다 한 팔레트에서 나온다(밝은/어두운 화면 자동).
   - 글꼴: `--sans`(시스템 한글 글꼴, 제목·본문 모두), 영어 문장은 `--en`, 한자는 `--han`(한문만 Noto Serif KR을 불러옴). 다른 웹 글꼴은 쓰지 않는다.
+  - 옛한글(아래아 ᆞ 등 첫가끝 자모 U+1100~11FF)은 시스템 글꼴로는 글자가 풀어져 보이므로 `fonts/yethangul-*.woff2`(Noto Sans CJK KR에서 옛한글 자모만 뽑은 글꼴, `theme.css`의 `YetHangul`, unicode-range로 그 글자에만 적용)를 쓴다. 옛한글은 첫가끝 자모로 적는다(예: ᄒᆞᆫ = U+1112 U+119E U+11AB). 만드는 법은 `fonts/README.md`.
   - 공통 모양: 하위 페이지 머리말의 `‹ 암기장`은 `<a class="backlink">` 또는 `.toplinks a`, 메뉴 타일은 `.ptile`/`.mtile`, 선택된 칩·고르기 버튼은 모두 강조색(`--accent`). 하위 화면에서는 큰 제목을 숨기고 `‹ 메뉴` 막대만 보인다.
   - 공책형 페이지의 `.btn/.card/.opt` 덮어쓰기는 `:where(.wrap)`으로 우선순위를 낮춰 두었다 → 페이지의 세부 모양(`.card.kP` 색 띠 등)이 이긴다.
   - 문제지 종이(`grammar-sheet.html`의 `.paper`)는 인쇄용이라 흰 종이·검은 글자 그대로 둔다.
