@@ -157,7 +157,11 @@ mark.bl{background:none;color:inherit;border-bottom:2px solid var(--gold);paddin
 .wprompt .hint .hh{font-family:var(--han);color:var(--ink);letter-spacing:.06em}
 .pad{position:relative;align-self:center;width:100%;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 #pg-write{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
-.pad canvas{display:block;width:100%;border-radius:8px;background:var(--card);box-shadow:var(--shadow);touch-action:none}
+.padIn{position:relative;margin:0 auto}
+.padIn canvas{position:absolute;inset:0;display:block;touch-action:none}
+.padIn .padBg{border-radius:8px;background:var(--card);box-shadow:var(--shadow)}
+.padIn canvas.erasing{cursor:cell}
+.tools .seg button{min-height:40px}
 .wans{background:var(--hl);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;word-break:keep-all}
 .wans .hh{font-family:var(--han);font-size:2rem;font-weight:700;letter-spacing:.08em;line-height:1.3;word-break:break-all}
 .wans small{color:var(--muted)}
@@ -634,8 +638,11 @@ function drawWrite() {
   box.innerHTML = `<div class="meta"><span>남은 ${WS.q.length} · 끝낸 ${WS.done.size}/${WS.total}</span><span>${dots("w", it.id)}</span></div>
     <div class="pbar"><span style="width:${WS.done.size / WS.total * 100}%"></span></div>
     <div class="wprompt hideBl k${it.col}"><div class="top"><span>${badge(it.col)} ${KINDNAME[it.kind]}${tags(it)}</span><span>${again ? "↻ 다시" : ""}</span></div>${wPrompt(it)}</div>
-    <div class="row"><button class="chip" id="traceBtn" aria-pressed="${trace}">흐리게 따라 쓰기</button>
-      <button class="chip" id="undoBtn">↶ 한 획 지우기</button><button class="chip" id="clearBtn">전부 지우기</button></div>
+    <div class="row tools">
+      <div class="seg" id="penSeg"><button data-k="pen" aria-pressed="true">✏️ 펜</button><button data-k="erase" aria-pressed="false">🧽 지우개</button></div>
+      <button class="chip" id="undoBtn">↶ 되돌리기</button><button class="chip" id="clearBtn">전부 지우기</button></div>
+    <div class="row tools"><button class="chip" id="traceBtn" aria-pressed="${trace}">흐리게 따라 쓰기</button>
+      <button class="chip" id="pressBtn" aria-pressed="${opt("pressure", true)}">펜슬 필압 (누르는 세기로 굵기)</button></div>
     <div class="pad" id="padWrap"><canvas id="padCv"></canvas></div>
     <button class="btn flip" id="showBtn">정답 보기</button>
     <div id="wAns" hidden></div>
@@ -644,7 +651,15 @@ function drawWrite() {
       <button class="r2" data-r="2">△<small>조금 틀림</small></button>
       <button class="r3" data-r="3">○<small>맞게 씀</small></button></div>
     <p class="tip">${trace ? "따라 쓰기로 맞힌 건 ○를 눌러도 다음엔 안 보고 쓰기로 꼭 다시 확인하세요." : "안 보고 쓴 뒤 정답과 겹쳐 보고 스스로 채점해요. 획이 하나라도 빠지면 △."}</p>`;
-  pad = makePad(document.getElementById("padCv"), it.w, trace);
+  let erasing = false;   // 새 문항마다 펜으로 시작
+  pad = makePad(document.getElementById("padCv"), it.w, trace, { erase: () => erasing, pressure: () => opt("pressure", true) });
+  const penSeg = document.getElementById("penSeg");
+  penSeg.querySelectorAll("button").forEach(btn => btn.onclick = () => {
+    erasing = btn.dataset.k === "erase";
+    penSeg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === btn));
+    document.getElementById("padCv").classList.toggle("erasing", erasing);
+  });
+  document.getElementById("pressBtn").onclick = e => { const v = !opt("pressure", true); setOpt("pressure", v); e.currentTarget.setAttribute("aria-pressed", v); };
   document.getElementById("traceBtn").onclick = () => { setOpt("trace", !trace); drawWrite(); };
   document.getElementById("undoBtn").onclick = () => pad.undo();
   document.getElementById("clearBtn").onclick = () => pad.clear();
@@ -660,52 +675,88 @@ function drawWrite() {
 }
 
 // 손글씨 칸: 글자 수만큼 田 모양 칸, 정답은 붉게 겹쳐 보여 준다
-function makePad(cv, text, trace) {
+//   두 겹: 아래 bg = 칸 선·따라 쓰기 글자 / 위 ink = 글씨(펜)·지우개(destination-out)·정답 겹쳐 보기
+//   펜슬(pointerType "pen")은 누르는 세기(pressure)로 굵기가 바뀐다. 손가락·마우스는 일정한 굵기.
+//   획 = { er: 지우개?, p: [[x, y, 굵기], ...] }  → 되돌리기는 지우개 획도 하나씩 취소한다.
+function makePad(cv, text, trace, tools) {
   const chars = [...text];
   const n = chars.length;
-  const W = cv.parentElement.clientWidth;
+  const wrap = cv.parentElement;
+  const W = wrap.clientWidth;
   const cols = n === 1 ? 1 : Math.min(n, W < 420 ? (n <= 4 ? n : 4) : (n <= 6 ? n : 6));
   const rows = Math.ceil(n / cols);
   const cell = n === 1 ? Math.min(W, 300) : Math.floor(W / cols);
   const w = cell * cols, h = cell * rows;
   const dpr = window.devicePixelRatio || 1;
-  cv.width = w * dpr; cv.height = h * dpr; cv.style.width = w + "px"; cv.style.height = h + "px";
-  cv.style.margin = "0 auto";
+  const inner = document.createElement("div");
+  inner.className = "padIn"; inner.style.width = w + "px"; inner.style.height = h + "px";
+  const bg = document.createElement("canvas"); bg.className = "padBg";
+  wrap.insertBefore(inner, cv); inner.appendChild(bg); inner.appendChild(cv);
+  [bg, cv].forEach(c => { c.width = w * dpr; c.height = h * dpr; c.style.width = w + "px"; c.style.height = h + "px"; });
+  const b = bg.getContext("2d"); b.scale(dpr, dpr);
   const g = cv.getContext("2d"); g.scale(dpr, dpr);
   const css = getComputedStyle(document.documentElement);
   const ink = css.getPropertyValue("--ink").trim(), rule = css.getPropertyValue("--line").trim();
+  const base = Math.max(3, cell / 26);          // 손가락·마우스 굵기
+  const eraserW = Math.max(14, cell / 7);
   let strokes = [], cur = null, revealed = false;
   const font = `700 ${Math.floor(cell * .78)}px "Noto Serif KR","Noto Serif CJK KR",serif`;
-  function guides() {
-    g.clearRect(0, 0, w, h);
+  function letters(ctx, color) {
+    ctx.fillStyle = color; ctx.font = font; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    chars.forEach((c, i) => ctx.fillText(c, (i % cols) * cell + cell / 2, Math.floor(i / cols) * cell + cell * .53));
+  }
+  function paintBg() {
+    b.clearRect(0, 0, w, h);
     for (let i = 0; i < n; i++) {
       const x = (i % cols) * cell, y = Math.floor(i / cols) * cell;
-      g.strokeStyle = rule; g.lineWidth = 1.2; g.setLineDash([]); g.strokeRect(x + .5, y + .5, cell - 1, cell - 1);
-      g.setLineDash([4, 5]); g.beginPath(); g.moveTo(x + cell / 2, y + 4); g.lineTo(x + cell / 2, y + cell - 4);
-      g.moveTo(x + 4, y + cell / 2); g.lineTo(x + cell - 4, y + cell / 2); g.stroke(); g.setLineDash([]);
+      b.strokeStyle = rule; b.lineWidth = 1.2; b.setLineDash([]); b.strokeRect(x + .5, y + .5, cell - 1, cell - 1);
+      b.setLineDash([4, 5]); b.beginPath(); b.moveTo(x + cell / 2, y + 4); b.lineTo(x + cell / 2, y + cell - 4);
+      b.moveTo(x + 4, y + cell / 2); b.lineTo(x + cell - 4, y + cell / 2); b.stroke(); b.setLineDash([]);
     }
+    if (trace) letters(b, "rgba(128,128,128,.22)");
   }
-  function letters(color) {
-    g.fillStyle = color; g.font = font; g.textAlign = "center"; g.textBaseline = "middle";
-    chars.forEach((c, i) => g.fillText(c, (i % cols) * cell + cell / 2, Math.floor(i / cols) * cell + cell * .53));
+  function seg(s, i) {               // 획의 i번째 점까지 한 토막 그리기 (토막마다 굵기가 달라 따로 그린다)
+    const p = s.p[i], q = s.p[i ? i - 1 : 0];
+    g.globalCompositeOperation = s.er ? "destination-out" : "source-over";
+    g.strokeStyle = ink; g.fillStyle = ink; g.lineCap = "round"; g.lineJoin = "round";
+    if (i === 0) { g.beginPath(); g.arc(p[0], p[1], p[2] / 2, 0, Math.PI * 2); g.fill(); return; }
+    g.lineWidth = (p[2] + q[2]) / 2;
+    g.beginPath(); g.moveTo(q[0], q[1]); g.lineTo(p[0], p[1]); g.stroke();
   }
   function paint() {
-    guides();
-    if (trace) letters("rgba(128,128,128,.22)");
-    g.strokeStyle = ink; g.lineCap = "round"; g.lineJoin = "round"; g.lineWidth = Math.max(3, cell / 26);
-    strokes.forEach(s => { g.beginPath(); s.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); if (s.length === 1) g.lineTo(s[0][0] + .1, s[0][1]); g.stroke(); });
-    if (revealed) letters("rgba(194,70,61,.42)");
+    g.globalCompositeOperation = "source-over"; g.clearRect(0, 0, w, h);
+    strokes.forEach(s => s.p.forEach((_, i) => seg(s, i)));
+    g.globalCompositeOperation = "source-over";
+    if (revealed) letters(g, "rgba(194,70,61,.42)");
   }
-  const pos = e => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
-  cv.onpointerdown = e => { e.preventDefault(); cv.setPointerCapture(e.pointerId); cur = [pos(e)]; strokes.push(cur); paint(); };
-  cv.onpointermove = e => { if (!cur) return; e.preventDefault(); cur.push(pos(e)); paint(); };
+  let pr = .5;                        // 펜슬 세기를 부드럽게 (갑자기 굵어지지 않게)
+  function width(e, er) {
+    if (er) return eraserW;
+    if (e.pointerType !== "pen" || !tools.pressure() || !e.pressure) return base;
+    pr = pr * .6 + e.pressure * .4;
+    return base * (.35 + pr * 1.6);   // 살짝 누르면 가늘게, 세게 누르면 굵게 (약 0.4~2배)
+  }
+  const pos = (e, er) => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top, width(e, er)]; };
+  const addPoint = e => { cur.p.push(pos(e, cur.er)); if (revealed) paint(); else seg(cur, cur.p.length - 1); };
+  cv.onpointerdown = e => {
+    e.preventDefault(); cv.setPointerCapture(e.pointerId);
+    pr = e.pressure || .5;
+    const er = tools.erase() || (e.buttons & 32) > 0;   // 지우개 모드 또는 펜 뒤쪽 지우개 버튼
+    cur = { er, p: [] }; strokes.push(cur); addPoint(e);
+  };
+  cv.onpointermove = e => {
+    if (!cur) return; e.preventDefault();
+    const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [];
+    (evs.length ? evs : [e]).forEach(addPoint);
+  };
   cv.onpointerup = cv.onpointercancel = () => { cur = null; };
   // 아이폰 사파리: 빨리 두 번 그으면 '두 번 탭 확대', 꾹 누르면 돋보기·선택이 켜진다 → 쓰기 칸 안의 터치 기본 동작을 모두 막는다
   const stop = e => { if (e.cancelable) e.preventDefault(); };
   ["touchstart", "touchmove", "touchend", "touchcancel", "gesturestart", "gesturechange", "dblclick", "contextmenu"]
     .forEach(t => cv.addEventListener(t, stop, { passive: false }));
-  if (document.fonts && document.fonts.load) document.fonts.load(font, text).then(paint, paint);
-  paint();
+  const all = () => { paintBg(); paint(); };
+  if (document.fonts && document.fonts.load) document.fonts.load(font, text).then(all, all);
+  all();
   return { undo() { strokes.pop(); paint(); }, clear() { strokes = []; paint(); }, reveal() { revealed = true; paint(); } };
 }
 
